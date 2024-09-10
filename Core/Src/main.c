@@ -35,6 +35,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define NUM_PROX 5
+
 typedef struct
 {
 	uint8_t LeftID;
@@ -48,6 +50,8 @@ typedef struct
 /* USER CODE BEGIN PD */
 uint8_t receiveBytes[8];
 uint8_t receiveBuff[8];
+uint8_t d80nk_[4];
+
 
 extern uint8_t commandBuffer[10];
 extern UART_HandleTypeDef huart2;
@@ -63,8 +67,6 @@ MotorControl motors;
 MPU6050_t MPU6050;
 extern SR04_PulseType pulse;
 extern SR04_PulseType pulse2;
-extern SR04_PulseType pulse3;
-extern SR04_PulseType pulse4;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -73,8 +75,6 @@ void distance_Calculate()
 {
 	SR04_Calculate(&pulse);
 	SR04_Calculate(&pulse2);
-	SR04_Calculate(&pulse3);
-	SR04_Calculate(&pulse4);
 }
 
 void buzzer()
@@ -85,6 +85,29 @@ void buzzer()
 	HAL_Delay(100);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 
+}
+
+void d80nk_read()
+{
+	GPIO_PinState pinStates[NUM_PROX];
+	pinStates[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
+	pinStates[1] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
+	pinStates[2] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13);
+	pinStates[3] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
+	for(int i=0; i<4;i++)
+	{
+		if(pinStates[i] == GPIO_PIN_SET)
+		{
+			d80nk_[i] = '0';
+
+		}
+		else
+		{
+			d80nk_[i] = '1';
+//			sprintf(message,"Sensor ON\n");
+//			HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
+		}
+	}
 }
 
 uint8_t checksum(uint8_t* data, uint8_t len) {
@@ -117,10 +140,10 @@ void SendToHost(struct motor_sensor_t* wheelsensor)
 {
 	uint8_t sendData[30];
 	sendData[0] = 0x00;
-	sendData[1] = wheelsensor->leftii;
+	sendData[1] = (wheelsensor->leftii) & 0xFF;
 	sendData[2] = ((wheelsensor->LeftVelocity)>>8) & 0xFF;
 	sendData[3] = wheelsensor->LeftVelocity & 0xFF;
-	sendData[4] = wheelsensor->reightii;
+	sendData[4] = wheelsensor->reightii & 0xFF;
 	sendData[5] = ((wheelsensor->RightVelocity)>>8) & 0xFF;
 	sendData[6] = wheelsensor->RightVelocity & 0xFF;
 	sendData[7] = (MPU6050.Accel_X_RAW >> 8) & 0xFF;
@@ -139,10 +162,10 @@ void SendToHost(struct motor_sensor_t* wheelsensor)
 	sendData[20] = ((int)pulse.distance) & 0xFF;
 	sendData[21] = (((int)pulse2.distance) >> 8) & 0xFF;
 	sendData[22] = ((int)pulse2.distance) & 0xFF;
-	sendData[23] = (((int)pulse3.distance) >> 8) & 0xFF;
-	sendData[24] = ((int)pulse3.distance) & 0xFF;
-	sendData[25] = (((int)pulse4.distance) >> 8) & 0xFF;
-	sendData[26] = ((int)pulse4.distance) & 0xFF;
+	sendData[23] = d80nk_[0] & 0xFF;
+	sendData[24] = d80nk_[1] & 0xFF;
+	sendData[25] = d80nk_[2] & 0xFF;
+	sendData[26] = d80nk_[3] & 0xFF;
 	sendData[27] = checksum(sendData, 28);
 	HAL_UART_Transmit(&huart1, sendData, 28, HAL_MAX_DELAY);
 	HAL_Delay(200);
@@ -241,13 +264,13 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-  MX_TIM5_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   SR04_Init();
   while (MPU6050_Init(&hi2c1) == 1)
     {
   	  sprintf(message,"Device not found. Retry...\n");
-  	  HAL_UART_Transmit(&huart1, message, sizeof(message), HAL_MAX_DELAY);
+  	  HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
   	  HAL_Delay(100);
     };
   buzzer();
@@ -260,6 +283,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 	  SR04_Start();
+	  d80nk_read();
 	  setVelocity(motors.LeftID, motors.LeftSpeed, 0);
 	  HAL_Delay(4);
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
