@@ -52,6 +52,9 @@ uint8_t receiveBytes[8];
 uint8_t receiveBuff[8];
 uint8_t d80nk_[4];
 
+volatile uint8_t huart2Received = 0;
+volatile uint32_t timerCounter = 0;
+
 
 extern uint8_t commandBuffer[10];
 extern UART_HandleTypeDef huart2;
@@ -181,6 +184,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 	else if(huart==&huart2)
 		{
+			huart2Received = 1;
+			timerCounter = 0;
 			short len = strlen(responseBuffer);
 			short arraysz=sizeof(responseBuffer)/sizeof(*responseBuffer);
 			for(int i=0;i<arraysz;i++)
@@ -209,6 +214,26 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			memset(responseBuffer, 0, sizeof(responseBuffer));
 			HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 		}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim == &htim4)
+	{
+		if(huart2Received)
+		{
+			huart2Received = 0; // Reset the flag
+			timerCounter = 0; // Reset the timer counter
+		}
+		else
+		{
+			timerCounter++;
+			if(timerCounter >= 2) // Adjust the value based on your timer period (e.g., 2 for 1 second if the timer period is 0.5 seconds)
+			{
+				timerCounter = 1;
+			}
+		}
+	}
 }
 /* USER CODE END PM */
 
@@ -264,6 +289,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  HAL_TIM_Base_Start_IT(&htim4);
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   SR04_Init();
@@ -288,7 +314,7 @@ int main(void)
 	  HAL_Delay(4);
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
-	  Parse_DMA_All(&wheelsensor);
+	  Parse_DMA_All(&wheelsensor, timerCounter);
 	  MPU6050_Read_All(&hi2c1, &MPU6050);
 	  distance_Calculate();
 	  SendToHost(&wheelsensor);

@@ -7,5 +7,5 @@
 ../Core/Src/DDSMLib.c:44:6:send	2
 ../Core/Src/DDSMLib.c:53:6:setID	1
 ../Core/Src/DDSMLib.c:59:6:setMode	1
-../Core/Src/DDSMLib.c:64:6:Parse_DMA_All	5
-../Core/Src/DDSMLib.c:114:9:setVelocity	6
+../Core/Src/DDSMLib.c:64:6:Parse_DMA_All	6
+../Core/Src/DDSMLib.c:124:9:setVelocity	6

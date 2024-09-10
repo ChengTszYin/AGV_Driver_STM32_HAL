@@ -61,54 +61,64 @@ void setMode(uint8_t id, ddsm115_mode_t mode){
 	HAL_UART_Transmit(&huart2, buf, sizeof(buf),10);
 }
 
-void Parse_DMA_All(struct motor_sensor_t* sensor)
+void Parse_DMA_All(struct motor_sensor_t* sensor, uint8_t connected)
 {
-	if(sizeof(responseBufferH)>0)
+	if (!connected)
 	{
-		sensor->leftii = responseBufferH[0];
-		sensor->leftMode = (ddsm115_mode_t)responseBufferH[1];
-		uint16_t current = (uint16_t)(responseBufferH[2]) << 8 | (uint16_t)(responseBufferH[3]);
-		short currentR = current;
-		if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-		if (currentR >= 0) {
-			sensor->leftCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-		} else {
-			sensor->leftCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-		}
-		uint16_t velocity = (uint16_t)(responseBufferH[4] << 8 | (uint16_t)(responseBufferH[5]));
-		velocityL = velocity;
-		if (velocityL  > MAX_VELOCITY){ velocityL -= 0xFFFF; velocityL--; }
-		sensor->LeftVelocity = velocityL;
-		sensor->Leftwinding_temp = responseBufferH[6];
-		sensor->Leftangle = round((float)responseBufferH[7] * (float)MAX_ANGLE / 255.0);
-		sensor->Righterror = responseBufferH[8];
-//		uint8_t mess[20];
-//		sprintf(mess, "Left sensor: %d\n",sensor->LeftVelocity);
-//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
+		if(sizeof(responseBufferH)>0)
+			{
+				sensor->leftii = responseBufferH[0];
+				sensor->leftMode = (ddsm115_mode_t)responseBufferH[1];
+				uint16_t current = (uint16_t)(responseBufferH[2]) << 8 | (uint16_t)(responseBufferH[3]);
+				short currentR = current;
+				if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
+				if (currentR >= 0) {
+					sensor->leftCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
+				} else {
+					sensor->leftCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
+				}
+				uint16_t velocity = (uint16_t)(responseBufferH[4] << 8 | (uint16_t)(responseBufferH[5]));
+				velocityL = velocity;
+				if (velocityL  > MAX_VELOCITY){ velocityL -= 0xFFFF; velocityL--; }
+				sensor->LeftVelocity = velocityL;
+				sensor->Leftwinding_temp = responseBufferH[6];
+				sensor->Leftangle = round((float)responseBufferH[7] * (float)MAX_ANGLE / 255.0);
+				sensor->Righterror = responseBufferH[8];
+		//		uint8_t mess[20];
+		//		sprintf(mess, "Left sensor: %d\n",sensor->LeftVelocity);
+		//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
+			}
+			if(sizeof(responseBufferL)>0)
+			{
+				sensor->reightii = responseBufferL[0];
+				sensor->rightMode = (ddsm115_mode_t)responseBufferL[1];
+				uint16_t current = (uint16_t)(responseBufferL[2]) << 8 | (uint16_t)(responseBufferL[3]);
+				short currentR = current;
+				if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
+				if (currentR >= 0) {
+					sensor->rightCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
+				} else {
+					sensor->rightCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
+				}
+				uint16_t velocity = (uint16_t)(responseBufferL[4] << 8 | (uint16_t)(responseBufferL[5]));
+				velocityR = velocity;
+				if (velocityR  > MAX_VELOCITY){ velocityR -= 0xFFFF; velocityR--; }
+				sensor->RightVelocity = velocityR;
+				sensor->Rightwinding_temp = responseBufferL[6];
+				sensor->Rightangle = round((float)responseBufferL[7] * (float)MAX_ANGLE / 255.0);
+				sensor->Righterror = responseBufferL[8];
+		//		uint8_t mess[20];
+		//		sprintf(mess, "RIGHT sensor: %d\n",sensor->RightVelocity);
+		//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
+			}
 	}
-	if(sizeof(responseBufferL)>0)
+	else
 	{
-		sensor->reightii = responseBufferL[0];
-		sensor->rightMode = (ddsm115_mode_t)responseBufferL[1];
-		uint16_t current = (uint16_t)(responseBufferL[2]) << 8 | (uint16_t)(responseBufferL[3]);
-		short currentR = current;
-		if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-		if (currentR >= 0) {
-			sensor->rightCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-		} else {
-			sensor->rightCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-		}
-		uint16_t velocity = (uint16_t)(responseBufferL[4] << 8 | (uint16_t)(responseBufferL[5]));
-		velocityR = velocity;
-		if (velocityR  > MAX_VELOCITY){ velocityR -= 0xFFFF; velocityR--; }
-		sensor->RightVelocity = velocityR;
-		sensor->Rightwinding_temp = responseBufferL[6];
-		sensor->Rightangle = round((float)responseBufferL[7] * (float)MAX_ANGLE / 255.0);
-		sensor->Righterror = responseBufferL[8];
-//		uint8_t mess[20];
-//		sprintf(mess, "RIGHT sensor: %d\n",sensor->RightVelocity);
-//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
+		sensor->LeftVelocity = 0;
+		sensor->RightVelocity = 0;
 	}
+
+
 }
 
 uint8_t setVelocity(uint8_t id, int16_t velocity, uint8_t acceleration)
