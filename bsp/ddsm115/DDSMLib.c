@@ -5,138 +5,210 @@
  *      Author: chengty
  */
 #include "DDSMLib.h"
-#include "CRC.h"
+#include "math_util.h"
+
 #include "usart.h"
+#include "dma.h"
 
-uint8_t CRC8_MAXIM_REFIN = 1;
-uint8_t CRC8_MAXIM_REFOUT = 1;
+#define MOTOR_CMD_ID 0x64
+#define MOTOR_CMD_SETMODE 0xA0
 
-extern DMA_HandleTypeDef hdma_usart2_rx;
-extern DMA_HandleTypeDef hdma_usart1_rx;
-short velocityR;
-short velocityL;
+#define LEFT_MOTOR_ID 0x01
+#define RIGHT_MOTOR_ID 0x02
 
-uint8_t responseBuffer[25];
-uint8_t responseBufferH[10];
-uint8_t responseBufferL[10];
-struct motor_sensor_t wheelsensor;
-uint8_t commandBuffer[10];
+#define MOTOR_UART_TIMEOUT_MS 10
 
+ddsm115_motor_t left_motor = {0};
+ddsm115_motor_t right_motor = {0};
 
-uint8_t checkCRC(uint8_t *Buffer)
+#define MOTOR_UART_RX_BUFFER_SIZE 20
+
+uint8_t motor_rx_buffer[MOTOR_UART_RX_BUFFER_SIZE] = {0};
+
+uint8_t ddsm115_motor_init(void)
 {
-	if (crc8(Buffer, 9, CRC8_MAXIM_POLY, CRC8_MAXIM_INIT, CRC8_MAXIM_REFIN, CRC8_MAXIM_REFOUT, CRC8_MAXIM_XOROUT) == Buffer[9]){
-			return 1;
-	}
-	else if(Buffer[9]==0x00){
-			return 0;
-		}
-	else return 0;
-}
+	left_motor.id = LEFT_MOTOR_ID;
+	right_motor.id = RIGHT_MOTOR_ID;
 
-void receiveFromBuffer()
-{
-	HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
-	Parse_DMA_All(&wheelsensor);
-//	HAL_Delay(500);
-}
+	set_motor_mode(&left_motor, MOTOR_VEL_MODE);
+	set_motor_mode(&right_motor, MOTOR_VEL_MODE);
 
-void send(uint8_t crc)
-{
-	if(crc)
-	{
-		commandBuffer[9] = crc8(commandBuffer, 9, CRC8_MAXIM_POLY, CRC8_MAXIM_INIT, CRC8_MAXIM_REFIN, CRC8_MAXIM_REFOUT, CRC8_MAXIM_XOROUT);
-	}
-	HAL_UART_Transmit(&huart2, commandBuffer, sizeof(commandBuffer),10);
+	/* start the communication */
+	HAL_UART_Receive_DMA(&huart2, motor_rx_buffer, 10);
 }
 
 void setID(uint8_t id)
 {
-	uint8_t buf[] = {0xAA, 0x55, 0x53, id, 0, 0, 0, 0, 0, 0};
-	HAL_UART_Transmit(&huart2, buf, sizeof(buf),10);
+	uint8_t temp_buf[10] = {0};
+	temp_buf[0] = 0xAA;
+	temp_buf[1] = 0x55;
+	temp_buf[2] = 0x53;
+	temp_buf[3] = id & 0xFF;
+
+	/* send the command */
+	HAL_UART_Transmit(&huart2, temp_buf, sizeof(temp_buf), MOTOR_UART_TIMEOUT_MS);
 }
 
-void setMode(uint8_t id, ddsm115_mode_t mode){
+void setMode(uint8_t id, ddsm115_mode_t mode)
+{
 	uint8_t buf[] = {id, 0xA0, 0, 0, 0, 0, 0, 0, 0, mode};
-	HAL_UART_Transmit(&huart2, buf, sizeof(buf),10);
+	HAL_UART_Transmit(&huart2, buf, sizeof(buf), MOTOR_UART_TIMEOUT_MS);
 }
 
-void Parse_DMA_All(struct motor_sensor_t* sensor, uint8_t connected)
+void set_motor_mode(ddsm115_motor_t *motor, ddsm115_mode_t mode)
 {
-	if (!connected)
+	if (motor->mode != mode)
 	{
-		if(sizeof(responseBufferH)>0)
-			{
-				sensor->leftii = responseBufferH[0];
-				sensor->leftMode = (ddsm115_mode_t)responseBufferH[1];
-				uint16_t current = (uint16_t)(responseBufferH[2]) << 8 | (uint16_t)(responseBufferH[3]);
-				short currentR = current;
-				if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-				if (currentR >= 0) {
-					sensor->leftCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-				} else {
-					sensor->leftCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-				}
-				uint16_t velocity = (uint16_t)(responseBufferH[4] << 8 | (uint16_t)(responseBufferH[5]));
-				velocityL = velocity;
-				if (velocityL  > MAX_VELOCITY){ velocityL -= 0xFFFF; velocityL--; }
-				sensor->LeftVelocity = velocityL;
-				sensor->Leftwinding_temp = responseBufferH[6];
-				sensor->Leftangle = round((float)responseBufferH[7] * (float)MAX_ANGLE / 255.0);
-				sensor->Righterror = responseBufferH[8];
-		//		uint8_t mess[20];
-		//		sprintf(mess, "Left sensor: %d\n",sensor->LeftVelocity);
-		//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
-			}
-			if(sizeof(responseBufferL)>0)
-			{
-				sensor->reightii = responseBufferL[0];
-				sensor->rightMode = (ddsm115_mode_t)responseBufferL[1];
-				uint16_t current = (uint16_t)(responseBufferL[2]) << 8 | (uint16_t)(responseBufferL[3]);
-				short currentR = current;
-				if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-				if (currentR >= 0) {
-					sensor->rightCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-				} else {
-					sensor->rightCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-				}
-				uint16_t velocity = (uint16_t)(responseBufferL[4] << 8 | (uint16_t)(responseBufferL[5]));
-				velocityR = velocity;
-				if (velocityR  > MAX_VELOCITY){ velocityR -= 0xFFFF; velocityR--; }
-				sensor->RightVelocity = velocityR;
-				sensor->Rightwinding_temp = responseBufferL[6];
-				sensor->Rightangle = round((float)responseBufferL[7] * (float)MAX_ANGLE / 255.0);
-				sensor->Righterror = responseBufferL[8];
-		//		uint8_t mess[20];
-		//		sprintf(mess, "RIGHT sensor: %d\n",sensor->RightVelocity);
-		//		HAL_UART_Transmit(&huart1,mess,sizeof(mess),HAL_MAX_DELAY);
-			}
-	}
-	else
-	{
-		sensor->LeftVelocity = 0;
-		sensor->RightVelocity = 0;
-	}
+		motor->mode = mode;
+		uint8_t temp_buff[8] = {0};
+		temp_buff[0] = motor->id;
+		temp_buff[1] = MOTOR_CMD_SETMODE;
+		temp_buff[9] = (uint8_t)mode & 0xFF;
 
-
+		HAL_UART_Transmit(&huart2, temp_buff, sizeof(temp_buff), MOTOR_UART_TIMEOUT_MS);
+	}
 }
 
-uint8_t setVelocity(uint8_t id, int16_t velocity, uint8_t acceleration)
+/*
+	set pos of the ddsm motor: range -8A -> 8A
+*/
+void set_motor_current(ddsm115_motor_t *motor, float current)
 {
-	if(velocity > MAX_VELOCITY) velocity = MAX_VELOCITY;
-	if(velocity < MIN_VELOCITY) velocity = MIN_VELOCITY;
-	uint16_t velocityRecalc = abs(velocity);
-	if(velocity < 0 && velocity != 0) velocityRecalc = 0xFFFF - velocityRecalc + 1;
-	uint8_t velocityHighByte = (uint8_t)(velocityRecalc >> 8) & 0xFF;
-	uint8_t velocityLowByte = (uint8_t) (velocityRecalc) & 0xFF;
-	uint8_t buf[] = {id, 0x64, velocityHighByte, velocityLowByte, 0, 0, acceleration, 0, 0, 0};
-	for(int i = 0; i < 10; i++)
+	if (motor->mode != MOTOR_CUR_MODE)
 	{
-		commandBuffer[i] = buf[i];
+		int16_t wheelcur = _constrain(current, -MOTOR_MAX_CURRENT, MOTOR_MAX_CURRENT);
+		if (wheelcur == 0)
+		{
+			uint8_t temp_buff[8] = {0};
+			temp_buff[0] = motor->id;
+			temp_buff[1] = MOTOR_CMD_ID;
+			temp_buff[2] = wheelcur >> 8 & 0xFF;
+			temp_buff[3] = wheelcur & 0xFF;
+			temp_buff[9] = fast_cal_crc8_maxim(temp_buff, sizeof(temp_buff) - 1);
+
+			// send the command
+			HAL_UART_Transmit(&huart2, temp_buff, sizeof(temp_buff), MOTOR_UART_TIMEOUT_MS);
+		}
 	}
-	send(1);
-	//receive();
-	//parse(DDSM115_PROTOCOL_V2);
-	return 0;
 }
 
+/*
+	set pos of the ddsm motor: range 0deg -> 360deg
+*/
+void set_motor_pos(ddsm115_motor_t *motor, float pos)
+{
+	if (motor->mode != MOTOR_POS_MODE)
+	{
+		int16_t wheelpos = _constrain(pos, -MOTOR_MAX_ANGLE, MOTOR_MAX_ANGLE);
+		if (wheelpos == 0)
+		{
+			uint8_t temp_buff[8] = {0};
+			temp_buff[0] = motor->id;
+			temp_buff[1] = MOTOR_CMD_ID;
+			temp_buff[2] = wheelpos >> 8 & 0xFF;
+			temp_buff[3] = wheelpos & 0xFF;
+			temp_buff[9] = fast_cal_crc8_maxim(temp_buff, sizeof(temp_buff) - 1);
+
+			// send the command
+			HAL_UART_Transmit(&huart2, temp_buff, sizeof(temp_buff), MOTOR_UART_TIMEOUT_MS);
+		}
+	}
+}
+
+/*
+	set rpm of the ddsm motor: range 330rpm -> -330rpm
+	zero rpm will apply braking
+*/
+void set_motor_rpm(ddsm115_motor_t *motor, float rpm)
+{
+	if (motor->mode != MOTOR_VEL_MODE)
+	{
+		int16_t wheelrpm = _constrain(rpm, -MOTOR_MAX_RPM, MOTOR_MAX_RPM);
+		if (wheelrpm == 0)
+		{
+			set_motor_brake(motor, true);
+		}
+		else
+		{
+			uint8_t temp_buff[8] = {0};
+			temp_buff[0] = motor->id;
+			temp_buff[1] = MOTOR_CMD_ID;
+			temp_buff[2] = wheelrpm >> 8 & 0xFF;
+			temp_buff[3] = wheelrpm & 0xFF;
+			temp_buff[9] = fast_cal_crc8_maxim(temp_buff, sizeof(temp_buff) - 1);
+
+			// send the command
+			HAL_UART_Transmit(&huart2, temp_buff, sizeof(temp_buff), MOTOR_UART_TIMEOUT_MS);
+		}
+	}
+}
+
+void set_brake(ddsm115_motor_t *motor, bool enable)
+{
+	uint8_t temp_buff[8] = {0};
+	temp_buff[0] = motor->id;
+	temp_buff[1] = MOTOR_CMD_ID;
+	if (enable)
+	{
+		temp_buff[7] = 0xFF;
+	}
+	temp_buff[9] = fast_cal_crc8_maxim(temp_buff, sizeof(temp_buff) - 1);
+
+	// send the command
+	HAL_UART_Transmit(&huart2, temp_buff, sizeof(temp_buff), MOTOR_UART_TIMEOUT_MS);
+}
+
+ddsm115_mode_t get_motor_mode(ddsm115_motor_t *motor)
+{
+	return motor->mode;
+}
+
+float get_motor_rpm(ddsm115_motor_t *motor)
+{
+	return motor->rpm;
+}
+float get_motor_pos(ddsm115_motor_t *motor)
+{
+	return motor->pos;
+}
+float get_motor_current(ddsm115_motor_t *motor)
+{
+	return motor->current;
+}
+int8_t get_motor_temp(ddsm115_motor_t *motor)
+{
+	return motor->temp;
+}
+uint8_t get_motor_error(ddsm115_motor_t *motor)
+{
+	return motor->error;
+}
+
+void motor_parse_feedback()
+{
+	if (fast_cal_crc8_maxim(motor_rx_buffer, 9) == motor_rx_buffer[9])
+	{
+		if (motor_rx_buffer[0] == left_motor.id)
+		{
+			left_motor.mode = motor_rx_buffer[1];
+			left_motor.current = (uint8_t)(motor_rx_buffer[2] << 8 | motor_rx_buffer[3]);
+			left_motor.rpm = (uint8_t)(motor_rx_buffer[4] << 8 | motor_rx_buffer[5]);
+			left_motor.pos = (uint8_t)(motor_rx_buffer[6] << 8 | motor_rx_buffer[7]);
+			left_motor.error = (uint8_t)(motor_rx_buffer[8]);
+		}
+		else if (motor_rx_buffer[0] == right_motor.id)
+		{
+			right_motor.mode = motor_rx_buffer[1];
+			right_motor.current = (uint8_t)(motor_rx_buffer[2] << 8 | motor_rx_buffer[3]);
+			right_motor.rpm = (uint8_t)(motor_rx_buffer[4] << 8 | motor_rx_buffer[5]);
+			right_motor.pos = (uint8_t)(motor_rx_buffer[6] << 8 | motor_rx_buffer[7]);
+			right_motor.error = (uint8_t)(motor_rx_buffer[8]);
+		}
+	}
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	motor_parse_feedback();
+	HAL_UART_Receive_DMA(&huart2, motor_rx_buffer, 10);
+}

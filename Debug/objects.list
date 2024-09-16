@@ -37,6 +37,8 @@
 "./Middlewares/Third_Party/FreeRTOS/Source/timers.o"
 "./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/port.o"
 "./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o"
+"./app/util/math_util.o"
+"./bsp/bsp_uart/bsp_uart.o"
 "./bsp/ddsm115/DDSMLib.o"
 "./bsp/mpu6050/mpu6050.o"
 "./bsp/sr04/SR04.o"

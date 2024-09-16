@@ -12,6 +12,8 @@ RM := rm -rf
 -include bsp/sr04/subdir.mk
 -include bsp/mpu6050/subdir.mk
 -include bsp/ddsm115/subdir.mk
+-include bsp/bsp_uart/subdir.mk
+-include app/util/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/subdir.mk
 -include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/subdir.mk

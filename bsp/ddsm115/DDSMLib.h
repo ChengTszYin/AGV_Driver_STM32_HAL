@@ -8,49 +8,50 @@
 #ifndef INC_DDSMLIB_H_
 #define INC_DDSMLIB_H_
 
-#include "main.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 
-#define RxBuffer_Size 20
-#define TxBuffer_Size 20
+//  motor profile
+#define MOTOR_MAX_CURRENT 8
+#define MOTOR_MAX_RPM 330
+#define MOTOR_MAX_ANGLE 360
 
-#define MAX_CURRENT 8
-#define MIN_CURRENT -8
-#define MAX_VELOCITY 330
-#define MIN_VELOCITY -330
-#define MAX_ANGLE 360
-#define MIN_ANGLE -360
-
-#define CRC8_MAXIM_POLY 0x31
-#define CRC8_MAXIM_INIT 0X00
-#define CRC8_MAXIM_XOROUT 0x00
-
-typedef enum{
-  CURRENT_LOOP = 1,
-  VELOCITY_LOOP = 2,
-  POSITION_LOOP = 3,
+typedef enum
+{
+	MOTOR_CUR_MODE = 1,
+	MOTOR_VEL_MODE,
+	MOTOR_POS_MODE,
 } ddsm115_mode_t;
 
-typedef enum{
-	DDSM115_PROTOCOL_V1 = 1,
-	DDSM115_PROTOCOL_V2 = 2,
-}ddsm115_protocol_t;
+typedef struct
+{
+	uint8_t id;
+	ddsm115_mode_t mode;
+	int16_t current;
+	int16_t rpm;
+	uint16_t pos;
+	int8_t temp;
+	uint8_t error;
+} ddsm115_motor_t;
 
-struct motor_sensor_t{
-	uint8_t leftii;
-	uint8_t reightii;
-	ddsm115_mode_t leftMode;
-	ddsm115_mode_t rightMode;
-	float leftCurrent;
-	float rightCurrent;
-	int16_t LeftVelocity;
-	int16_t RightVelocity;
-	uint8_t Leftwinding_temp;
-	uint8_t Rightwinding_temp;
-	int16_t Leftangle;
-	int16_t Rightangle;
-	uint8_t Lefterror;
-	uint8_t Righterror;
-};
+extern ddsm115_motor_t left_motor;
+extern ddsm115_motor_t right_motor;
 
+uint8_t ddsm115_motor_init(void);
+
+void set_motor_mode(ddsm115_motor_t *motor, ddsm115_mode_t mode);
+void set_motor_current(ddsm115_motor_t *motor, float current);
+void set_motor_rpm(ddsm115_motor_t *motor, float rpm);
+void set_motor_pos(ddsm115_motor_t *motor, float pos);
+void set_brake(ddsm115_motor_t *motor, bool enable);
+
+ddsm115_mode_t get_motor_mode();
+float get_motor_rpm(ddsm115_motor_t *motor);
+float get_motor_pos(ddsm115_motor_t *motor);
+float get_motor_current(ddsm115_motor_t *motor);
+int8_t get_motor_temp(ddsm115_motor_t *motor);
+uint8_t get_motor_error(ddsm115_motor_t *motor);
 
 #endif /* INC_DDSMLIB_H_ */
