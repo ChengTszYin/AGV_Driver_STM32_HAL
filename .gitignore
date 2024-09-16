@@ -65,3 +65,18 @@ ctrlp.root
 
 #html
 *.html
+
+.metadata/
+
+build/
+*.scvd
+*ini
+*.jlink
+.vscode/
+
+Debug
+Release
+.setting
+*.launch
+*.cfg
+
