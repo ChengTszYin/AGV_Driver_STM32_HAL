@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (11.3.rel1)
+# Toolchain: GNU Tools for STM32 (12.3.rel1)
 ################################################################################
 
 -include ../makefile.init
@@ -9,6 +9,13 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include bsp/sr04/subdir.mk
+-include bsp/mpu6050/subdir.mk
+-include bsp/ddsm115/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/subdir.mk
+-include Middlewares/Third_Party/FreeRTOS/Source/subdir.mk
 -include Drivers/STM32F1xx_HAL_Driver/Src/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
@@ -60,8 +67,8 @@ all: main-build
 main-build: f103_robotv2.elf secondary-outputs
 
 # Tool invocations
-f103_robotv2.elf f103_robotv2.map: $(OBJS) $(USER_OBJS) C:\Users\chengty\STM32CubeIDE\workspace_1.14.1\f103_robotv2\STM32F103RCTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "f103_robotv2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\chengty\STM32CubeIDE\workspace_1.14.1\f103_robotv2\STM32F103RCTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="f103_robotv2.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+f103_robotv2.elf f103_robotv2.map: $(OBJS) $(USER_OBJS) C:\Users\tybpc\Documents\temp\test\AGV_Driver_STM32_HAL\STM32F103RCTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "f103_robotv2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\tybpc\Documents\temp\test\AGV_Driver_STM32_HAL\STM32F103RCTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="f103_robotv2.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

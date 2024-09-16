@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "dma.h"
 #include "i2c.h"
 #include "tim.h"
@@ -216,25 +217,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		}
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim == &htim4)
-	{
-		if(huart2Received)
-		{
-			huart2Received = 0; // Reset the flag
-			timerCounter = 0; // Reset the timer counter
-		}
-		else
-		{
-			timerCounter++;
-			if(timerCounter >= 2) // Adjust the value based on your timer period (e.g., 2 for 1 second if the timer period is 0.5 seconds)
-			{
-				timerCounter = 1;
-			}
-		}
-	}
-}
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -245,6 +228,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -289,7 +273,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-  HAL_TIM_Base_Start_IT(&htim4);
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   SR04_Init();
@@ -303,22 +286,33 @@ int main(void)
   HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* Call init function for freertos objects (in freertos.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-	  SR04_Start();
-	  d80nk_read();
-	  setVelocity(motors.LeftID, motors.LeftSpeed, 0);
-	  HAL_Delay(4);
-	  setVelocity(motors.RightID, motors.RightSpeed, 0);
-	  receiveFromBuffer();
-	  Parse_DMA_All(&wheelsensor, timerCounter);
-	  MPU6050_Read_All(&hi2c1, &MPU6050);
-	  distance_Calculate();
-	  SendToHost(&wheelsensor);
+
     /* USER CODE BEGIN 3 */
+	  SR04_Start();
+	  	  d80nk_read();
+	  	  setVelocity(motors.LeftID, motors.LeftSpeed, 0);
+	  	  HAL_Delay(4);
+	  	  setVelocity(motors.RightID, motors.RightSpeed, 0);
+	  	  receiveFromBuffer();
+	  	  Parse_DMA_All(&wheelsensor, timerCounter);
+	  	  MPU6050_Read_All(&hi2c1, &MPU6050);
+	  	  distance_Calculate();
+	  	  SendToHost(&wheelsensor);
   }
   /* USER CODE END 3 */
 }
@@ -365,6 +359,43 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+  if(htim->Instance == TIM4)
+  	{
+  		if(huart2Received)
+  		{
+  			huart2Received = 0; // Reset the flag
+  			timerCounter = 0; // Reset the timer counter
+  		}
+  		else
+  		{
+  			timerCounter++;
+  			if(timerCounter >= 2) // Adjust the value based on your timer period (e.g., 2 for 1 second if the timer period is 0.5 seconds)
+  			{
+  				timerCounter = 1;
+  			}
+  		}
+  	}
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

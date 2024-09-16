@@ -57,6 +57,40 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SR04_2_TRIG_Pin GPIO_PIN_3
+#define SR04_2_TRIG_GPIO_Port GPIOC
+#define RS485_UART_TX_Pin GPIO_PIN_2
+#define RS485_UART_TX_GPIO_Port GPIOA
+#define RS485_UART_RX_Pin GPIO_PIN_3
+#define RS485_UART_RX_GPIO_Port GPIOA
+#define BUZZER_Pin GPIO_PIN_5
+#define BUZZER_GPIO_Port GPIOA
+#define SR04_1_ECHO_Pin GPIO_PIN_0
+#define SR04_1_ECHO_GPIO_Port GPIOB
+#define SR04_1_TRIG_Pin GPIO_PIN_1
+#define SR04_1_TRIG_GPIO_Port GPIOB
+#define DEBUG_TX_Pin GPIO_PIN_10
+#define DEBUG_TX_GPIO_Port GPIOB
+#define DEBUG_RX_Pin GPIO_PIN_11
+#define DEBUG_RX_GPIO_Port GPIOB
+#define BUMP_1_Pin GPIO_PIN_12
+#define BUMP_1_GPIO_Port GPIOB
+#define BUMP_2_Pin GPIO_PIN_13
+#define BUMP_2_GPIO_Port GPIOB
+#define BUMP_3_Pin GPIO_PIN_14
+#define BUMP_3_GPIO_Port GPIOB
+#define BUMP_4_Pin GPIO_PIN_15
+#define BUMP_4_GPIO_Port GPIOB
+#define UPLINK_UART_TX_Pin GPIO_PIN_9
+#define UPLINK_UART_TX_GPIO_Port GPIOA
+#define UPLINK_UART_RX_Pin GPIO_PIN_10
+#define UPLINK_UART_RX_GPIO_Port GPIOA
+#define SR04_2_ECHO_Pin GPIO_PIN_15
+#define SR04_2_ECHO_GPIO_Port GPIOA
+#define IMU_SCL_Pin GPIO_PIN_6
+#define IMU_SCL_GPIO_Port GPIOB
+#define IMU_SDA_Pin GPIO_PIN_7
+#define IMU_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

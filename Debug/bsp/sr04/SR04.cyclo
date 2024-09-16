@@ -1,0 +1,4 @@
+../bsp/sr04/SR04.c:7:6:SR04_Init	1
+../bsp/sr04/SR04.c:14:6:SR04_Start	1
+../bsp/sr04/SR04.c:25:6:HAL_TIM_IC_CaptureCallback	5
+../bsp/sr04/SR04.c:62:6:SR04_Calculate	2
