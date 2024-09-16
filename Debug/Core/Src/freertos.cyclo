@@ -1,5 +1,0 @@
-../Core/Src/freertos.c:96:6:MX_FREERTOS_Init	1
-../Core/Src/freertos.c:147:6:comm_control_task	1
-../Core/Src/freertos.c:165:6:motor_control_task	1
-../Core/Src/freertos.c:183:6:imu_control_task	1
-../Core/Src/freertos.c:201:6:io_control_task	1

@@ -21,7 +21,7 @@
 ddsm115_motor_t left_motor = {0};
 ddsm115_motor_t right_motor = {0};
 
-#define MOTOR_UART_RX_BUFFER_SIZE 20
+
 
 uint8_t motor_rx_buffer[MOTOR_UART_RX_BUFFER_SIZE] = {0};
 
@@ -95,7 +95,7 @@ void set_motor_current(ddsm115_motor_t *motor, float current)
 /*
 	set pos of the ddsm motor: range 0deg -> 360deg
 */
-void set_motor_pos(ddsm115_motor_t *motor, float pos)
+void set_motor_pos(ddsm115_motor_t *motor, uint16_t pos)
 {
 	if (motor->mode != MOTOR_POS_MODE)
 	{
@@ -119,7 +119,7 @@ void set_motor_pos(ddsm115_motor_t *motor, float pos)
 	set rpm of the ddsm motor: range 330rpm -> -330rpm
 	zero rpm will apply braking
 */
-void set_motor_rpm(ddsm115_motor_t *motor, float rpm)
+void set_motor_rpm(ddsm115_motor_t *motor, int16_t rpm)
 {
 	if (motor->mode != MOTOR_VEL_MODE)
 	{
@@ -143,7 +143,7 @@ void set_motor_rpm(ddsm115_motor_t *motor, float rpm)
 	}
 }
 
-void set_brake(ddsm115_motor_t *motor, bool enable)
+void set_motor_brake(ddsm115_motor_t *motor, bool enable)
 {
 	uint8_t temp_buff[8] = {0};
 	temp_buff[0] = motor->id;
@@ -163,17 +163,17 @@ ddsm115_mode_t get_motor_mode(ddsm115_motor_t *motor)
 	return motor->mode;
 }
 
-float get_motor_rpm(ddsm115_motor_t *motor)
+int16_t get_motor_rpm(ddsm115_motor_t *motor)
 {
 	return motor->rpm;
 }
 float get_motor_pos(ddsm115_motor_t *motor)
 {
-	return motor->pos;
+	return (float)motor->pos * 360.0f / 32767.0f ;
 }
 float get_motor_current(ddsm115_motor_t *motor)
 {
-	return motor->current;
+	return (float)motor->current * 8.0f / 32767.0f;
 }
 int8_t get_motor_temp(ddsm115_motor_t *motor)
 {
@@ -207,8 +207,3 @@ void motor_parse_feedback()
 	}
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	motor_parse_feedback();
-	HAL_UART_Receive_DMA(&huart2, motor_rx_buffer, 10);
-}

@@ -47,12 +47,8 @@ int __io_putchar(int ch) // 实现该方法，以使printf可以正确工作
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// uint8_t receiveBytes[8];
-// uint8_t receiveBuff[8];
-// uint8_t d80nk_[4];
-
-// volatile uint8_t huart2Received = 0;
-// volatile uint32_t timerCounter = 0;
+uint8_t receiveBuff[8];
+uint8_t d80nk_[4];
 
 uint8_t message[20];
 
@@ -63,105 +59,106 @@ extern SR04_PulseType pulse2;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-// void distance_Calculate()
-// {
-// 	SR04_Calculate(&pulse);
-// 	SR04_Calculate(&pulse2);
-// }
 
-// void buzzer()
-// {
-// 	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-// 	HAL_Delay(100);
-// 	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-// 	HAL_Delay(100);
-// 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+void buzzer()
+{
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	HAL_Delay(100);
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	HAL_Delay(100);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+}
 
-// }
+void d80nk_read()
+{
+	GPIO_PinState pinStates[NUM_PROX];
+	pinStates[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
+	pinStates[1] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
+	pinStates[2] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13);
+	pinStates[3] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
+	for (int i = 0; i < 4; i++)
+	{
+		if (pinStates[i] == GPIO_PIN_SET)
+		{
+			d80nk_[i] = '0';
+		}
+		else
+		{
+			d80nk_[i] = '1';
+			//			sprintf(message,"Sensor ON\n");
+			//			HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
+		}
+	}
+}
 
-// void d80nk_read()
-// {
-// 	GPIO_PinState pinStates[NUM_PROX];
-// 	pinStates[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
-// 	pinStates[1] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
-// 	pinStates[2] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13);
-// 	pinStates[3] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
-// 	for(int i=0; i<4;i++)
-// 	{
-// 		if(pinStates[i] == GPIO_PIN_SET)
-// 		{
-// 			d80nk_[i] = '0';
+uint8_t checksum(uint8_t *data, uint8_t len)
+{
+	uint8_t crc = 0;
+	for (uint8_t i = 0; i < len - 1; i++)
+	{
+		crc += data[i];
+	}
+	return crc;
+}
 
-// 		}
-// 		else
-// 		{
-// 			d80nk_[i] = '1';
-// //			sprintf(message,"Sensor ON\n");
-// //			HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
-// 		}
-// 	}
-// }
+void HostMessageParse(uint8_t *receiveBytes)
+{
+	if (receiveBytes[7] == checksum(receiveBytes, 8))
+	{
+		set_motor_rpm(&left_motor, (int16_t)((receiveBytes[2] << 8) | receiveBytes[3]));
+		set_motor_rpm(&right_motor, (int16_t)((receiveBytes[5] << 8) | receiveBytes[6]));
+	}
+	memset(receiveBytes, 0, sizeof(receiveBytes));
+}
 
-// uint8_t checksum(uint8_t* data, uint8_t len) {
-//     uint8_t crc = 0;
-//     for (uint8_t i = 0; i < len-1; i++) {
-//        crc += data[i];
-//     }
-//     return crc;
-// }
+void SendToHost()
+{
+	uint8_t sendData[30];
+	sendData[0] = 0x00;
+	sendData[1] = (left_motor.id) & 0xFF;
+	sendData[2] = ((get_motor_rpm(&left_motor)) >> 8) & 0xFF;
+	sendData[3] = (get_motor_rpm(&left_motor)) & 0xFF;
+	sendData[4] = right_motor.id & 0xFF;
+	sendData[5] = (get_motor_rpm(&right_motor) >> 8) & 0xFF;
+	sendData[6] = get_motor_rpm(&right_motor) & 0xFF;
+	sendData[7] = (MPU6050.Accel_X_RAW >> 8) & 0xFF;
+	sendData[8] = MPU6050.Accel_X_RAW & 0XFF;
+	sendData[9] = (MPU6050.Accel_Y_RAW >> 8) & 0XFF;
+	sendData[10] = MPU6050.Accel_Y_RAW & 0xFF;
+	sendData[11] = (MPU6050.Accel_Z_RAW >> 8) & 0xFF;
+	sendData[12] = MPU6050.Accel_Z_RAW & 0xFF;
+	sendData[13] = (MPU6050.Gyro_X_RAW >> 8) & 0XFF;
+	sendData[14] = MPU6050.Gyro_X_RAW & 0xFF;
+	sendData[15] = (MPU6050.Gyro_Y_RAW >> 8) & 0XFF;
+	sendData[16] = MPU6050.Gyro_Y_RAW & 0xFF;
+	sendData[17] = (MPU6050.Gyro_Z_RAW >> 8) & 0XFF;
+	sendData[18] = MPU6050.Gyro_Z_RAW & 0xFF;
+	sendData[19] = (((int)pulse.Distance) >> 8) & 0xFF;
+	sendData[20] = ((int)pulse.Distance) & 0xFF;
+	sendData[21] = (((int)pulse2.Distance) >> 8) & 0xFF;
+	sendData[22] = ((int)pulse2.Distance) & 0xFF;
+	sendData[23] = d80nk_[0] & 0xFF;
+	sendData[24] = d80nk_[1] & 0xFF;
+	sendData[25] = d80nk_[2] & 0xFF;
+	sendData[26] = d80nk_[3] & 0xFF;
+	sendData[27] = checksum(sendData, 28);
+	HAL_UART_Transmit(&huart1, sendData, 28, HAL_MAX_DELAY);
+}
 
-// void HostMessageParse(uint8_t *receiveBytes)
-// {
-// 	uint8_t data[8];
-// 	for(uint8_t i=0;i<8;i++)
-// 	{
-// 		data[i] = receiveBytes[i];
-// 	}
-// 	uint8_t checking = checksum(data,8);
-// 	if(checking==data[7])
-// 	{
-// 		motors.LeftID = data[1];
-// 		motors.LeftSpeed = (data[2] << 8) | data[3];
-// 		motors.RightID = data[4];
-// 		motors.RightSpeed = (data[5] << 8) | data[6];
-// 	}
-// 	memset(receiveBytes, 0, sizeof(receiveBytes));
-// }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == &huart1)
+	{
+		HostMessageParse(receiveBuff);
+		HAL_UART_Receive_DMA(&huart1, receiveBuff, sizeof(receiveBuff));
+	}
+	else if (huart == &huart2)
+	{
+		motor_parse_feedback();
+		HAL_UART_Receive_DMA(&huart2, motor_rx_buffer, 10);
+	}
+}
 
-// void SendToHost(struct motor_sensor_t* wheelsensor)
-// {
-// 	uint8_t sendData[30];
-// 	sendData[0] = 0x00;
-// 	sendData[1] = (wheelsensor->leftii) & 0xFF;
-// 	sendData[2] = ((wheelsensor->LeftVelocity) >> 8) & 0xFF;
-// 	sendData[3] = wheelsensor->LeftVelocity & 0xFF;
-// 	sendData[4] = wheelsensor->reightii & 0xFF;
-// 	sendData[5] = ((wheelsensor->RightVelocity) >> 8) & 0xFF;
-// 	sendData[6] = wheelsensor->RightVelocity & 0xFF;
-// 	sendData[7] = (MPU6050.Accel_X_RAW >> 8) & 0xFF;
-// 	sendData[8] = MPU6050.Accel_X_RAW & 0XFF;
-// 	sendData[9] = (MPU6050.Accel_Y_RAW >> 8) & 0XFF;
-// 	sendData[10] = MPU6050.Accel_Y_RAW & 0xFF;
-// 	sendData[11] = (MPU6050.Accel_Z_RAW >> 8) & 0xFF;
-// 	sendData[12] = MPU6050.Accel_Z_RAW & 0xFF;
-// 	sendData[13] = (MPU6050.Gyro_X_RAW >> 8) & 0XFF;
-// 	sendData[14] = MPU6050.Gyro_X_RAW & 0xFF;
-// 	sendData[15] = (MPU6050.Gyro_Y_RAW >> 8) & 0XFF;
-// 	sendData[16] = MPU6050.Gyro_Y_RAW & 0xFF;
-// 	sendData[17] = (MPU6050.Gyro_Z_RAW >> 8) & 0XFF;
-// 	sendData[18] = MPU6050.Gyro_Z_RAW & 0xFF;
-// 	sendData[19] = (((int)pulse.distance) >> 8) & 0xFF;
-// 	sendData[20] = ((int)pulse.distance) & 0xFF;
-// 	sendData[21] = (((int)pulse2.distance) >> 8) & 0xFF;
-// 	sendData[22] = ((int)pulse2.distance) & 0xFF;
-// 	sendData[23] = d80nk_[0] & 0xFF;
-// 	sendData[24] = d80nk_[1] & 0xFF;
-// 	sendData[25] = d80nk_[2] & 0xFF;
-// 	sendData[26] = d80nk_[3] & 0xFF;
-// 	sendData[27] = checksum(sendData, 28);
-// 	HAL_UART_Transmit(&huart1, sendData, 28, HAL_MAX_DELAY);
-// 	HAL_Delay(200);
-// }
 //
 // void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //{
@@ -233,6 +230,7 @@ int main(void)
 	MX_USART3_UART_Init();
 	/* USER CODE BEGIN 2 */
 	SR04_Init();
+	ddsm115_motor_init();
 	while (MPU6050_Init(&hi2c1) == 1)
 	{
 		printf(message, "Device not found. Retry...\n");
@@ -247,14 +245,11 @@ int main(void)
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		SR04_Start();
+		SR04_Read();
 		d80nk_read();
-		setVelocity(motors.LeftID, motors.LeftSpeed, 0);
-		setVelocity(motors.RightID, motors.RightSpeed, 0);
-		Parse_DMA_All(&wheelsensor, timerCounter);
 		MPU6050_Read_All(&hi2c1, &MPU6050);
-		distance_Calculate();
-		SendToHost(&wheelsensor);
+		SendToHost();
+		HAL_Delay(200);
 	}
 	/* USER CODE END 3 */
 }

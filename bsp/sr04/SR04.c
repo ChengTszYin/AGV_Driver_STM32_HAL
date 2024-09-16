@@ -3,8 +3,8 @@
 #include "main.h"
 #include "tim.h"
 
-SR04_PulseType pulse;
-SR04_PulseType pulse2;
+SR04_PulseType pulse = {0};
+SR04_PulseType pulse2 = {0};
 
 void SR04_Init()
 {
