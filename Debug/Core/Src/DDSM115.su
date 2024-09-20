@@ -1,0 +1,17 @@
+../Core/Inc/CRC.h:11:9:reverseBits	24	static
+../Core/Inc/CRC.h:23:9:crc8	48	static
+../Core/Inc/CRC.h:45:10:crc16	48	static
+../Core/Inc/CRC.h:67:10:crc32	48	static
+../Core/Src/DDSM115.c:26:6:printf	40	static
+../Core/Src/DDSM115.c:33:9:checkCRC	24	static
+../Core/Src/DDSM115.c:42:6:parse	32	static
+../Core/Src/DDSM115.c:85:6:receive	8	static
+../Core/Src/DDSM115.c:90:6:send	32	static
+../Core/Src/DDSM115.c:99:6:setID	32	static
+../Core/Src/DDSM115.c:105:9:getID	24	static
+../Core/Src/DDSM115.c:117:6:setMode	32	static
+../Core/Src/DDSM115.c:122:9:getMode	32	static
+../Core/Src/DDSM115.c:133:9:setBrakes	32	static
+../Core/Src/DDSM115.c:144:9:setCurrent	40	static
+../Core/Src/DDSM115.c:162:9:setVelocity	40	static
+../Core/Src/DDSM115.c:181:9:setPosition	40	static
