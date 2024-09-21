@@ -127,6 +127,9 @@ extern struct motor_sensor_t wheelsensor;
 MotorControl motors;
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
 MPU6050_t MPU6050;
+
+volatile uint8_t huart2Received = 0;
+volatile uint32_t timerCounter = 0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -216,19 +219,39 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
-{
-  /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartDefaultTask */
-}
+//void StartDefaultTask(void const * argument)
+//{
+//  /* USER CODE BEGIN StartDefaultTask */
+//  /* Infinite loop */
+//  for(;;)
+//  {
+//    osDelay(1);
+//  }
+//  /* USER CODE END StartDefaultTask */
+//}
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim == &htim4)
+	{
+		if(huart2Received)
+		{
+			huart2Received = 0; // Reset the flag
+			timerCounter = 0; // Reset the timer counter
+		}
+		else
+		{
+			timerCounter++;
+			if(timerCounter >= 2) // Adjust the value based on your timer period (e.g., 2 for 1 second if the timer period is 0.5 seconds)
+			{
+				timerCounter = 1;
+			}
+		}
+	}
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart == &huart1)
@@ -240,6 +263,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	if(huart == &huart2)
 	{
+		huart2Received = 1;
+		timerCounter = 0;
 		short len = strlen(responseBuffer);
 		short arraysz=sizeof(responseBuffer)/sizeof(*responseBuffer);
 		for(int i=0;i<arraysz;i++)
@@ -272,6 +297,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void Serial_Task(void *argument)
 {
+	HAL_TIM_Base_Start_IT(&htim4);
 	HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	while(1)
@@ -280,9 +306,9 @@ void Serial_Task(void *argument)
 	  vTaskDelay(L_R_delay);
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
-	  Parse_DMA_All(&wheelsensor, 0);
+	  Parse_DMA_All(&wheelsensor, timerCounter);
 //	  uint8_t str[20];
-//	  sprintf(str, "speed: %d\n", (int)wheelsensor.LeftVelocity);
+//	  sprintf(str, "connected: %d\n", (int)wheelsensor.LeftVelocity);
 //	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
@@ -297,9 +323,6 @@ void Sensor_Task(void *argument)
 		SR04_Start();
 		d80nk_read();
 		distance_Calculate();
-//		uint8_t str[20];
-//		sprintf(str, "distance: %d\n", (int)pulse2.distance);
-//		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	}
 }
 
