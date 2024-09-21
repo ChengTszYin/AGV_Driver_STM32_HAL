@@ -22,6 +22,7 @@
 #include "task.h"
 #include "main.h"
 #include "usart.h"
+#include "i2c.h"
 //#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -29,7 +30,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "DDSMLib.h"
-
+#include "mpu6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -86,16 +87,19 @@ extern struct motor_sensor_t wheelsensor;
 
 MotorControl motors;
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
+MPU6050_t MPU6050;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
 xTaskHandle Serial_Task_Handler;
-xTaskHandle Motor_Task_Handler;
+xTaskHandle Sensor_Task_Handler;
+xTaskHandle IMU_Task_Handler;
 
 void Serial_Task(void *argument);
-void Motor_Task(void *argument);
+void Sensor_Task(void *argument);
+void IMU_Task(void *argument);
 /* USER CODE END Variables */
 //osThreadId defaultTaskHandle;
 
@@ -156,8 +160,9 @@ void MX_FREERTOS_Init(void) {
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 2, &Serial_Task_Handler);
-  xTaskCreate(Motor_Task, "Motor_Task", 128, NULL, 1,&Motor_Task_Handler);
+  xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 3, &Serial_Task_Handler);
+  xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 1,&Sensor_Task_Handler);
+  xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 2, IMU_Task_Handler);
   /* USER CODE END RTOS_THREADS */
 
 }
@@ -234,16 +239,36 @@ void Serial_Task(void *argument)
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
 	  Parse_DMA_All(&wheelsensor, 0);
+
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	}
 }
 
-void Motor_Task(void *argument)
+void Sensor_Task(void *argument)
 {
 	while(1)
 	{
 
+	}
+}
+
+void IMU_Task(void *argument)
+{
+	uint32_t tick_delay = pdMS_TO_TICKS(500);
+	while (MPU6050_Init(&hi2c1) == 1)
+	{
+	  uint8_t message[30];
+	  sprintf(message,"Device not found. Retry...\n");
+	  HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
+	  vTaskDelay(tick_delay);
+	};
+	while(1)
+	{
+		MPU6050_Read_All(&hi2c1, &MPU6050);
+//		uint8_t str[20];
+//		sprintf(str, "speed: %d\n", MPU6050.Accel_X_RAW);
+//		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	}
 }
 /* USER CODE END Application */
