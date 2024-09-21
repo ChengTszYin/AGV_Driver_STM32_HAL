@@ -23,6 +23,7 @@
 #include "main.h"
 #include "usart.h"
 #include "i2c.h"
+#include "gpio.h"
 //#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -35,6 +36,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define NUM_PROX 5
+
 typedef struct
 {
 	uint8_t LeftID;
@@ -42,6 +45,8 @@ typedef struct
 	short LeftSpeed;
 	short RightSpeed;
 } MotorControl;
+
+uint8_t d80nk_[4];
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -70,6 +75,29 @@ void HostMessageParse(uint8_t *receiveBytes, MotorControl* motors)
 		motors->RightSpeed = (data[5] << 8) | data[6];
 	}
 	memset(receiveBytes, 0, sizeof(receiveBytes));
+}
+
+void d80nk_read()
+{
+	GPIO_PinState pinStates[NUM_PROX];
+	pinStates[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_15);
+	pinStates[1] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_14);
+	pinStates[2] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13);
+	pinStates[3] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
+	for(int i=0; i<4;i++)
+	{
+		if(pinStates[i] == GPIO_PIN_SET)
+		{
+			d80nk_[i] = '0';
+
+		}
+		else
+		{
+			d80nk_[i] = '1';
+//			sprintf(message,"Sensor ON\n");
+//			HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
+		}
+	}
 }
 /* USER CODE END PD */
 
@@ -161,7 +189,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 3, &Serial_Task_Handler);
-  xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 1,&Sensor_Task_Handler);
+  xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 2,&Sensor_Task_Handler);
   xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 2, IMU_Task_Handler);
   /* USER CODE END RTOS_THREADS */
 
@@ -249,7 +277,10 @@ void Sensor_Task(void *argument)
 {
 	while(1)
 	{
-
+		d80nk_read();
+		uint8_t str[20];
+		sprintf(str, "on\off: %d\n", d80nk_[0]);
+		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	}
 }
 
@@ -266,9 +297,7 @@ void IMU_Task(void *argument)
 	while(1)
 	{
 		MPU6050_Read_All(&hi2c1, &MPU6050);
-//		uint8_t str[20];
-//		sprintf(str, "speed: %d\n", MPU6050.Accel_X_RAW);
-//		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
+
 	}
 }
 /* USER CODE END Application */
