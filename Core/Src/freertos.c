@@ -32,6 +32,7 @@
 #include <string.h>
 #include "DDSMLib.h"
 #include "mpu6050.h"
+#include "SR04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +48,8 @@ typedef struct
 } MotorControl;
 
 uint8_t d80nk_[4];
+extern SR04_PulseType pulse;
+extern SR04_PulseType pulse2;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -99,6 +102,14 @@ void d80nk_read()
 		}
 	}
 }
+
+void distance_Calculate()
+{
+	SR04_Calculate(&pulse);
+	SR04_Calculate(&pulse2);
+	if(pulse.distance > 80.0) pulse.distance = 80.0;
+	if(pulse2.distance > 80.0) pulse2.distance = 80.0;
+}
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -124,10 +135,12 @@ MPU6050_t MPU6050;
 xTaskHandle Serial_Task_Handler;
 xTaskHandle Sensor_Task_Handler;
 xTaskHandle IMU_Task_Handler;
+xTaskHandle Feedback_Task_Handler;
 
 void Serial_Task(void *argument);
 void Sensor_Task(void *argument);
 void IMU_Task(void *argument);
+void Feedback_Task(void *argument);
 /* USER CODE END Variables */
 //osThreadId defaultTaskHandle;
 
@@ -188,9 +201,10 @@ void MX_FREERTOS_Init(void) {
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 3, &Serial_Task_Handler);
-  xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 2,&Sensor_Task_Handler);
-  xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 2, IMU_Task_Handler);
+  xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 4, &Serial_Task_Handler);
+  xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 3,&Sensor_Task_Handler);
+  xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 3, IMU_Task_Handler);
+  xTaskCreate(Feedback_Task, "Feedback_Task", 128, NULL, 3, Feedback_Task_Handler);
   /* USER CODE END RTOS_THREADS */
 
 }
@@ -267,7 +281,9 @@ void Serial_Task(void *argument)
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
 	  Parse_DMA_All(&wheelsensor, 0);
-
+//	  uint8_t str[20];
+//	  sprintf(str, "speed: %d\n", (int)wheelsensor.LeftVelocity);
+//	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	}
@@ -275,12 +291,54 @@ void Serial_Task(void *argument)
 
 void Sensor_Task(void *argument)
 {
+	SR04_Init();
 	while(1)
 	{
+		SR04_Start();
 		d80nk_read();
-		uint8_t str[20];
-		sprintf(str, "on\off: %d\n", d80nk_[0]);
-		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
+		distance_Calculate();
+//		uint8_t str[20];
+//		sprintf(str, "distance: %d\n", (int)pulse2.distance);
+//		HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
+	}
+}
+
+void Feedback_Task(void *argument)
+{
+	uint32_t tick_delay = pdMS_TO_TICKS(200);
+	while(1)
+	{
+		uint8_t sendData[30];
+		sendData[0] = 0x00;
+		sendData[1] = (wheelsensor.leftii) & 0xFF;
+		sendData[2] = ((wheelsensor.LeftVelocity)>>8) & 0xFF;
+		sendData[3] = wheelsensor.LeftVelocity & 0xFF;
+		sendData[4] = wheelsensor.reightii & 0xFF;
+		sendData[5] = ((wheelsensor.RightVelocity)>>8) & 0xFF;
+		sendData[6] = wheelsensor.RightVelocity & 0xFF;
+		sendData[7] = (MPU6050.Accel_X_RAW >> 8) & 0xFF;
+		sendData[8] = MPU6050.Accel_X_RAW & 0XFF;
+		sendData[9] = (MPU6050.Accel_Y_RAW >> 8) & 0XFF;
+		sendData[10] = MPU6050.Accel_Y_RAW & 0xFF;
+		sendData[11] = (MPU6050.Accel_Z_RAW >> 8) & 0xFF;
+		sendData[12] = MPU6050.Accel_Z_RAW & 0xFF;
+		sendData[13] = (MPU6050.Gyro_X_RAW >> 8) & 0XFF;
+		sendData[14] = MPU6050.Gyro_X_RAW & 0xFF;
+		sendData[15] = (MPU6050.Gyro_Y_RAW >> 8) & 0XFF;
+		sendData[16] = MPU6050.Gyro_Y_RAW & 0xFF;
+		sendData[17] = (MPU6050.Gyro_Z_RAW >> 8) & 0XFF;
+		sendData[18] = MPU6050.Gyro_Z_RAW & 0xFF;
+		sendData[19] = (((int)pulse.distance) >> 8) & 0xFF;
+		sendData[20] = ((int)pulse.distance) & 0xFF;
+		sendData[21] = (((int)pulse2.distance) >> 8) & 0xFF;
+		sendData[22] = ((int)pulse2.distance) & 0xFF;
+		sendData[23] = d80nk_[0] & 0xFF;
+		sendData[24] = d80nk_[1] & 0xFF;
+		sendData[25] = d80nk_[2] & 0xFF;
+		sendData[26] = d80nk_[3] & 0xFF;
+		sendData[27] = checksum(sendData, 28);
+		HAL_UART_Transmit(&huart1, sendData, 28, HAL_MAX_DELAY);
+		vTaskDelay(tick_delay);
 	}
 }
 
