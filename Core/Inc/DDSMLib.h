@@ -1,12 +1,12 @@
 /*
- * DDSM115.h
+ * DDSMLib.h
  *
- *  Created on: Mar 21, 2024
+ *  Created on: Apr 14, 2024
  *      Author: chengty
  */
 
-#ifndef INC_DDSM115_H_
-#define INC_DDSM115_H_
+#ifndef INC_DDSMLIB_H_
+#define INC_DDSMLIB_H_
 
 #include "main.h"
 
@@ -24,7 +24,6 @@
 #define CRC8_MAXIM_INIT 0X00
 #define CRC8_MAXIM_XOROUT 0x00
 
-
 typedef enum{
   CURRENT_LOOP = 1,
   VELOCITY_LOOP = 2,
@@ -36,23 +35,22 @@ typedef enum{
 	DDSM115_PROTOCOL_V2 = 2,
 }ddsm115_protocol_t;
 
-typedef enum{
-	DDSM115_TROUBLESHOOTING = 0x10,
-	DDSM115_STALL_ERROR = 0x08,
-	DDSM115_PHASE_OVERCURRENT_ERROR = 0x04,
-	DDSM115_OVERCURRENT_ERROR = 0x02,
-	DDSM115_SENSOR_ERROR = 0x01,
-}ddsm115_error_t;
-
-struct Response{
-	uint8_t id;
-	ddsm115_mode_t mode;
-	float current;
-	int16_t velocity;
-	int16_t angle;
-	uint8_t winding_temp;
-	int16_t position;
-	uint8_t error;
+struct motor_sensor_t{
+	uint8_t leftii;
+	uint8_t reightii;
+	ddsm115_mode_t leftMode;
+	ddsm115_mode_t rightMode;
+	float leftCurrent;
+	float rightCurrent;
+	int16_t LeftVelocity;
+	int16_t RightVelocity;
+	uint8_t Leftwinding_temp;
+	uint8_t Rightwinding_temp;
+	int16_t Leftangle;
+	int16_t Rightangle;
+	uint8_t Lefterror;
+	uint8_t Righterror;
 };
 
-#endif /* INC_DDSM115_H_ */
+
+#endif /* INC_DDSMLIB_H_ */

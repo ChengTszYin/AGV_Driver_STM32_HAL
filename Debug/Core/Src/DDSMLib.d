@@ -1,4 +1,4 @@
-Core/Src/DDSM115.o: ../Core/Src/DDSM115.c ../Core/Inc/DDSM115.h \
+Core/Src/DDSMLib.o: ../Core/Src/DDSMLib.c ../Core/Inc/DDSMLib.h \
  ../Core/Inc/main.h ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -23,7 +23,7 @@ Core/Src/DDSM115.o: ../Core/Src/DDSM115.c ../Core/Inc/DDSM115.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  ../Core/Inc/CRC.h ../Core/Inc/usart.h
-../Core/Inc/DDSM115.h:
+../Core/Inc/DDSMLib.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 ../Core/Inc/stm32f1xx_hal_conf.h:

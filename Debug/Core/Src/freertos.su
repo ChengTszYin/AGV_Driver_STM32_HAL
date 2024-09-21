@@ -1,8 +1,8 @@
 ../Core/Src/freertos.c:48:9:checksum	24	static
 ../Core/Src/freertos.c:56:6:HostMessageParse	32	static
-../Core/Src/freertos.c:110:6:vApplicationGetIdleTaskMemory	24	static
-../Core/Src/freertos.c:124:6:MX_FREERTOS_Init	16	static
-../Core/Src/freertos.c:164:6:StartDefaultTask	16	static
-../Core/Src/freertos.c:177:6:HAL_UART_RxCpltCallback	16	static
-../Core/Src/freertos.c:187:6:Serial_Task	24	static
-../Core/Src/freertos.c:199:6:Motor_Task	16	static
+../Core/Src/freertos.c:118:6:vApplicationGetIdleTaskMemory	24	static
+../Core/Src/freertos.c:132:6:MX_FREERTOS_Init	16	static
+../Core/Src/freertos.c:172:6:StartDefaultTask	16	static
+../Core/Src/freertos.c:185:6:HAL_UART_RxCpltCallback	48	static
+../Core/Src/freertos.c:226:6:Serial_Task	16	static
+../Core/Src/freertos.c:242:6:Motor_Task	16	static

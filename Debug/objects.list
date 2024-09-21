@@ -1,4 +1,4 @@
-"./Core/Src/DDSM115.o"
+"./Core/Src/DDSMLib.o"
 "./Core/Src/dma.o"
 "./Core/Src/freertos.o"
 "./Core/Src/gpio.o"

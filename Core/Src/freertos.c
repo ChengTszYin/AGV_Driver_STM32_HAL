@@ -28,7 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
 #include <string.h>
-#include "DDSM115.h"
+#include "DDSMLib.h"
 
 /* USER CODE END Includes */
 
@@ -77,7 +77,15 @@ void HostMessageParse(uint8_t *receiveBytes, MotorControl* motors)
 uint8_t receiveBytes[8];
 uint8_t receiveBuff[8];
 
+extern uint8_t responseBuffer[25];
+extern uint8_t responseBufferH[10];
+extern uint8_t responseBufferL[10];
+
+extern uint8_t commandBuffer[10];
+extern struct motor_sensor_t wheelsensor;
+
 MotorControl motors;
+uint32_t L_R_delay = pdMS_TO_TICKS(4);
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -182,17 +190,52 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HostMessageParse(receiveBytes, &motors);
 		HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	}
+
+	if(huart == &huart2)
+	{
+		short len = strlen(responseBuffer);
+		short arraysz=sizeof(responseBuffer)/sizeof(*responseBuffer);
+		for(int i=0;i<arraysz;i++)
+		{
+			if(responseBuffer[i]==motors.LeftID)
+			{
+				uint8_t sigmentBuffer[10];
+				memcpy(sigmentBuffer, &responseBuffer[i], 10);
+				uint8_t checking = checkCRC(&sigmentBuffer);
+				if(checking)
+				{
+					memcpy(responseBufferL, &responseBuffer[i], 10);
+				}
+			}
+			else if(responseBuffer[i]==motors.RightID)
+			{
+				uint8_t sigmentBuffer[10];
+				memcpy(sigmentBuffer, &responseBuffer[i], 10);
+				uint8_t checking = checkCRC(&sigmentBuffer);
+				if(checking)
+				{
+					memcpy(responseBufferH, &responseBuffer[i], 10);
+				}
+			}
+		}
+		memset(responseBuffer, 0, sizeof(responseBuffer));
+		HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
+	}
 }
 
 void Serial_Task(void *argument)
 {
-	uint32_t TickDelay = pdMS_TO_TICKS(1000);
 	HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
+	HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	while(1)
 	{
-	  HAL_UART_Transmit(&huart2, receiveBuff, sizeof(receiveBuff), HAL_MAX_DELAY);
+	  setVelocity(motors.LeftID, motors.LeftSpeed, 0);
+	  vTaskDelay(L_R_delay);
+	  setVelocity(motors.RightID, motors.RightSpeed, 0);
+	  receiveFromBuffer();
+	  Parse_DMA_All(&wheelsensor, 0);
+	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
-	  vTaskDelay(TickDelay);
 	}
 }
 
