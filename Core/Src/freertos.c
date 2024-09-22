@@ -300,6 +300,7 @@ void Serial_Task(void *argument)
 	HAL_TIM_Base_Start_IT(&htim4);
 	HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
+	uint32_t send_delay = pdMS_TO_TICKS(100);
 	while(1)
 	{
 	  setVelocity(motors.LeftID, motors.LeftSpeed, 0);
@@ -307,22 +308,12 @@ void Serial_Task(void *argument)
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
 	  Parse_DMA_All(&wheelsensor, timerCounter);
-//	  uint8_t str[20];
-//	  sprintf(str, "connected: %d\n", (int)wheelsensor.LeftVelocity);
+//	  uint8_t str[10];
+//	  sprintf(str, "%d\n", (int)timerCounter);
 //	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
+	  vTaskDelay(send_delay);
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
-	}
-}
-
-void Sensor_Task(void *argument)
-{
-	SR04_Init();
-	while(1)
-	{
-		SR04_Start();
-		d80nk_read();
-		distance_Calculate();
 	}
 }
 
@@ -365,6 +356,17 @@ void Feedback_Task(void *argument)
 	}
 }
 
+void Sensor_Task(void *argument)
+{
+	SR04_Init();
+	while(1)
+	{
+		SR04_Start();
+		d80nk_read();
+		distance_Calculate();
+	}
+}
+
 void IMU_Task(void *argument)
 {
 	uint32_t tick_delay = pdMS_TO_TICKS(500);
@@ -377,8 +379,7 @@ void IMU_Task(void *argument)
 	};
 	while(1)
 	{
-		MPU6050_Read_All(&hi2c1, &MPU6050);
-
+	  MPU6050_Read_All(&hi2c1, &MPU6050);
 	}
 }
 /* USER CODE END Application */

@@ -6,7 +6,7 @@
 ../Core/Src/freertos.c:180:6:MX_FREERTOS_Init	16	static
 ../Core/Src/freertos.c:235:6:HAL_TIM_PeriodElapsedCallback	16	static
 ../Core/Src/freertos.c:255:6:HAL_UART_RxCpltCallback	48	static
-../Core/Src/freertos.c:298:6:Serial_Task	16	static
-../Core/Src/freertos.c:318:6:Sensor_Task	16	static
-../Core/Src/freertos.c:329:6:Feedback_Task	56	static
-../Core/Src/freertos.c:368:6:IMU_Task	56	static
+../Core/Src/freertos.c:298:6:Serial_Task	24	static
+../Core/Src/freertos.c:320:6:Feedback_Task	56	static
+../Core/Src/freertos.c:359:6:Sensor_Task	16	static
+../Core/Src/freertos.c:370:6:IMU_Task	56	static
