@@ -3309,12 +3309,12 @@ void Serial_Task(void *argument)
  8001e70:	4619      	mov	r1, r3
  8001e72:	4810      	ldr	r0, [pc, #64]	; (8001eb4 <Serial_Task+0xa4>)
  8001e74:	f7ff fabc 	bl	80013f0 <Parse_DMA_All>
-//	  uint8_t str[10];
-//	  sprintf(str, "%d\n", (int)timerCounter);
-//	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  vTaskDelay(send_delay);
  8001e78:	68f8      	ldr	r0, [r7, #12]
  8001e7a:	f006 f959 	bl	8008130 <vTaskDelay>
+//	  uint8_t str[30];
+//	  sprintf(str, "%L: %d R: %d\n", wheelsensor.LeftVelocity,  wheelsensor.RightVelocity);
+//	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
  8001e7e:	2219      	movs	r2, #25
  8001e80:	4907      	ldr	r1, [pc, #28]	; (8001ea0 <Serial_Task+0x90>)

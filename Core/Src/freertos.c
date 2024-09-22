@@ -308,10 +308,10 @@ void Serial_Task(void *argument)
 	  setVelocity(motors.RightID, motors.RightSpeed, 0);
 	  receiveFromBuffer();
 	  Parse_DMA_All(&wheelsensor, timerCounter);
-//	  uint8_t str[10];
-//	  sprintf(str, "%d\n", (int)timerCounter);
-//	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  vTaskDelay(send_delay);
+//	  uint8_t str[30];
+//	  sprintf(str, "%L: %d R: %d\n", wheelsensor.LeftVelocity,  wheelsensor.RightVelocity);
+//	  HAL_UART_Transmit(&huart3, str, sizeof(str), HAL_MAX_DELAY);
 	  HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
 	  HAL_UART_Receive_DMA(&huart1,receiveBuff,sizeof(receiveBuff));
 	}
