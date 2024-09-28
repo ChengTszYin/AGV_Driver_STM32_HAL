@@ -1,6 +1,6 @@
 # Pinout
-PA2 -> RS485 RXD  
-PA3 -> RS485 TXD
+PA3 -> RS485 RXD  
+PA2 -> RS485 TXD
 5V -> RS 485 VCC
 GND -> RS485 GND
 
