@@ -31,13 +31,14 @@
 #include <stdint.h>
 #include <string.h>
 #include "DDSMLib.h"
-#include "mpu6050.h"
+#include "gy95t.h"
 #include "SR04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 #define NUM_PROX 5
+#define iic_add  0xa4>>1
 
 typedef struct
 {
@@ -126,7 +127,10 @@ extern struct motor_sensor_t wheelsensor;
 
 MotorControl motors;
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
-MPU6050_t MPU6050;
+
+gy my_95Q;
+uint8_t td = 0;
+
 
 volatile uint8_t huart2Received = 0;
 volatile uint32_t timerCounter = 0;
@@ -322,7 +326,7 @@ void Feedback_Task(void *argument)
 	uint32_t tick_delay = pdMS_TO_TICKS(200);
 	while(1)
 	{
-		uint8_t sendData[30];
+		uint8_t sendData[36];
 		sendData[0] = 0x00;
 		sendData[1] = (wheelsensor.leftii) & 0xFF;
 		sendData[2] = ((wheelsensor.LeftVelocity)>>8) & 0xFF;
@@ -330,28 +334,36 @@ void Feedback_Task(void *argument)
 		sendData[4] = wheelsensor.reightii & 0xFF;
 		sendData[5] = ((wheelsensor.RightVelocity)>>8) & 0xFF;
 		sendData[6] = wheelsensor.RightVelocity & 0xFF;
-		sendData[7] = (MPU6050.Accel_X_RAW >> 8) & 0xFF;
-		sendData[8] = MPU6050.Accel_X_RAW & 0XFF;
-		sendData[9] = (MPU6050.Accel_Y_RAW >> 8) & 0XFF;
-		sendData[10] = MPU6050.Accel_Y_RAW & 0xFF;
-		sendData[11] = (MPU6050.Accel_Z_RAW >> 8) & 0xFF;
-		sendData[12] = MPU6050.Accel_Z_RAW & 0xFF;
-		sendData[13] = (MPU6050.Gyro_X_RAW >> 8) & 0XFF;
-		sendData[14] = MPU6050.Gyro_X_RAW & 0xFF;
-		sendData[15] = (MPU6050.Gyro_Y_RAW >> 8) & 0XFF;
-		sendData[16] = MPU6050.Gyro_Y_RAW & 0xFF;
-		sendData[17] = (MPU6050.Gyro_Z_RAW >> 8) & 0XFF;
-		sendData[18] = MPU6050.Gyro_Z_RAW & 0xFF;
-		sendData[19] = (((int)pulse.distance) >> 8) & 0xFF;
-		sendData[20] = ((int)pulse.distance) & 0xFF;
-		sendData[21] = (((int)pulse2.distance) >> 8) & 0xFF;
-		sendData[22] = ((int)pulse2.distance) & 0xFF;
-		sendData[23] = d80nk_[0] & 0xFF;
-		sendData[24] = d80nk_[1] & 0xFF;
-		sendData[25] = d80nk_[2] & 0xFF;
-		sendData[26] = d80nk_[3] & 0xFF;
-		sendData[27] = checksum(sendData, 28);
-		HAL_UART_Transmit(&huart1, sendData, 28, HAL_MAX_DELAY);
+		sendData[7] = (my_95Q.Acc_x >> 8) & 0xFF;
+		sendData[8] = my_95Q.Acc_x & 0XFF;
+		sendData[9] = (my_95Q.Acc_y >> 8) & 0XFF;
+		sendData[10] = my_95Q.Acc_y & 0xFF;
+		sendData[11] = (my_95Q.Acc_z >> 8) & 0xFF;
+		sendData[12] = my_95Q.Acc_z & 0xFF;
+		sendData[13] = (my_95Q.Gyro_x >> 8) & 0XFF;
+		sendData[14] = my_95Q.Gyro_x & 0xFF;
+		sendData[15] = (my_95Q.Gyro_y >> 8) & 0XFF;
+		sendData[16] = my_95Q.Gyro_y & 0xFF;
+		sendData[17] = (my_95Q.Gyro_z >> 8) & 0XFF;
+		sendData[18] = my_95Q.Gyro_z >> 8 & 0xFF;
+		sendData[19] = (my_95Q.Q0 >> 8) & 0xFF;
+		sendData[20] = my_95Q.Q0 & 0xFF;
+		sendData[21] = (my_95Q.Q1 >> 8) & 0xFF;
+		sendData[22] = my_95Q.Q1 & 0xFF;
+		sendData[23] = (my_95Q.Q2 >> 8) & 0xFF;
+		sendData[24] = my_95Q.Q2 & 0xFF;
+		sendData[25] = (my_95Q.Q3 >> 8) & 0xFF;
+		sendData[26] = my_95Q.Q3 & 0xFF;
+		sendData[27] = (((int)pulse.distance) >> 8) & 0xFF;
+		sendData[28] = ((int)pulse.distance) & 0xFF;
+		sendData[29] = (((int)pulse2.distance) >> 8) & 0xFF;
+		sendData[30] = ((int)pulse2.distance) & 0xFF;
+		sendData[31] = d80nk_[0] & 0xFF;
+		sendData[32] = d80nk_[1] & 0xFF;
+		sendData[33] = d80nk_[2] & 0xFF;
+		sendData[34] = d80nk_[3] & 0xFF;
+		sendData[35] = checksum(sendData, 36);
+		HAL_UART_Transmit(&huart1, sendData, 36, HAL_MAX_DELAY);
 		vTaskDelay(tick_delay);
 	}
 }
@@ -369,17 +381,17 @@ void Sensor_Task(void *argument)
 
 void IMU_Task(void *argument)
 {
-	uint32_t tick_delay = pdMS_TO_TICKS(500);
-	while (MPU6050_Init(&hi2c1) == 1)
+	uint32_t tick_delay = pdMS_TO_TICKS(200);
+	iic_read(0x02,&td,1);
+	while(td != 1)
 	{
-	  uint8_t message[30];
-	  sprintf(message,"Device not found. Retry...\n");
-	  HAL_UART_Transmit(&huart3, message, sizeof(message), HAL_MAX_DELAY);
-	  vTaskDelay(tick_delay);
-	};
+	    iic_read(0x02,&td,1);
+		vTaskDelay(tick_delay);
+	}
 	while(1)
 	{
-	  MPU6050_Read_All(&hi2c1, &MPU6050);
+		gy95_All(&my_95Q);
+		vTaskDelay(tick_delay);
 	}
 }
 /* USER CODE END Application */
