@@ -131,7 +131,7 @@ extern struct motor_sensor_t wheelsensor;
 MotorControl motors;
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
 
-gyro_data imu_gy95t = {0};
+gyro_data imu_gy95t;
 
 volatile uint8_t huart2Received = 0;
 volatile uint32_t timerCounter = 0;
@@ -387,12 +387,15 @@ void IMU_Task(void *argument)
 {
 
 	gy95t_init();
-	printf("IMU init sucess\r\n");
+	char test_msg [50] = {0};
+	sprintf(test_msg, "IMU init sucess\r\n");
+	HAL_UART_Transmit(&huart1, test_msg, sizeof(test_msg), HAL_MAX_DELAY);
 	while (1)
 	{
 		gy95t_read_all(imu_gy95t);
 		// use uart to printf something
-		printf("IMU: ax: %d, ay: %d az: %d\r\n", imu_gy95t.Acc_x, imu_gy95t.Acc_y, imu_gy95t.Acc_z);
+		sprintf(test_msg, "IMU: ax: %d, ay: %d az: %d\r\n", imu_gy95t.Acc_x, imu_gy95t.Acc_y, imu_gy95t.Acc_z);
+		HAL_UART_Transmit(&huart1, test_msg, sizeof(test_msg), HAL_MAX_DELAY);
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 }
