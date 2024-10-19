@@ -33,7 +33,6 @@
 #include "DDSMLib.h"
 #include "gy95t.h"
 #include "SR04.h"
-#include "i2c.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -122,11 +121,6 @@ void distance_Calculate()
 uint8_t receiveBytes[8];
 uint8_t receiveBuff[8];
 
-extern i2c_tx_complete;
-extern i2c_rx_complete;
-
-uint8_t data_L;
-uint8_t data_H;
 
 extern uint8_t responseBuffer[25];
 extern uint8_t responseBufferH[10];
@@ -138,7 +132,8 @@ extern struct motor_sensor_t wheelsensor;
 MotorControl motors;
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
 
-gyro_data imu_gy95t = {0};
+gy my_95Q;
+uint8_t td = 0;
 
 volatile uint8_t huart2Received = 0;
 volatile uint32_t timerCounter = 0;
@@ -164,7 +159,7 @@ void Feedback_Task(void *argument);
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const *argument);
+//void StartDefaultTask(void const *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -219,7 +214,7 @@ void MX_FREERTOS_Init(void)
 	/* USER CODE BEGIN RTOS_THREADS */
 	xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 4, &Serial_Task_Handler);
 	xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 3, &Sensor_Task_Handler);
-	xTaskCreate(IMU_Task, "IMU_Task", 256, NULL, 3, IMU_Task_Handler);
+	xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 3, IMU_Task_Handler);
 	xTaskCreate(Feedback_Task, "Feedback_Task", 128, NULL, 3, Feedback_Task_Handler);
 	/* USER CODE END RTOS_THREADS */
 }
@@ -263,22 +258,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 }
-
-//void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
-//{
-//	if(hi2c == &hi2c1)
-//	{
-//		i2c_tx_complete = 1;
-//	}
-//}
-//
-//void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
-//{
-//    if(hi2c == &hi2c1)
-//    {
-//    	i2c_rx_complete = 1;
-//    }
-//}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -348,36 +327,36 @@ void Serial_Task(void *argument)
 void Feedback_Task(void *argument)
 {
 	uint32_t tick_delay = pdMS_TO_TICKS(200);
-	while (1)
+	while(1)
 	{
 		uint8_t sendData[36];
 		sendData[0] = 0x00;
 		sendData[1] = (wheelsensor.leftii) & 0xFF;
-		sendData[2] = ((wheelsensor.LeftVelocity) >> 8) & 0xFF;
+		sendData[2] = ((wheelsensor.LeftVelocity)>>8) & 0xFF;
 		sendData[3] = wheelsensor.LeftVelocity & 0xFF;
 		sendData[4] = wheelsensor.reightii & 0xFF;
-		sendData[5] = ((wheelsensor.RightVelocity) >> 8) & 0xFF;
+		sendData[5] = ((wheelsensor.RightVelocity)>>8) & 0xFF;
 		sendData[6] = wheelsensor.RightVelocity & 0xFF;
-		sendData[7] = (imu_gy95t.Acc_x >> 8) & 0xFF;
-		sendData[8] = imu_gy95t.Acc_x & 0XFF;
-		sendData[9] = (imu_gy95t.Acc_y >> 8) & 0XFF;
-		sendData[10] = imu_gy95t.Acc_y & 0xFF;
-		sendData[11] = (imu_gy95t.Acc_z >> 8) & 0xFF;
-		sendData[12] = imu_gy95t.Acc_z & 0xFF;
-		sendData[13] = (imu_gy95t.Gyro_x >> 8) & 0XFF;
-		sendData[14] = imu_gy95t.Gyro_x & 0xFF;
-		sendData[15] = (imu_gy95t.Gyro_y >> 8) & 0XFF;
-		sendData[16] = imu_gy95t.Gyro_y & 0xFF;
-		sendData[17] = (imu_gy95t.Gyro_z >> 8) & 0XFF;
-		sendData[18] = imu_gy95t.Gyro_z >> 8 & 0xFF;
-		sendData[19] = (imu_gy95t.Q0 >> 8) & 0xFF;
-		sendData[20] = imu_gy95t.Q0 & 0xFF;
-		sendData[21] = (imu_gy95t.Q1 >> 8) & 0xFF;
-		sendData[22] = imu_gy95t.Q1 & 0xFF;
-		sendData[23] = (imu_gy95t.Q2 >> 8) & 0xFF;
-		sendData[24] = imu_gy95t.Q2 & 0xFF;
-		sendData[25] = (imu_gy95t.Q3 >> 8) & 0xFF;
-		sendData[26] = imu_gy95t.Q3 & 0xFF;
+		sendData[7] = (my_95Q.Acc_x >> 8) & 0xFF;
+		sendData[8] = my_95Q.Acc_x & 0XFF;
+		sendData[9] = (my_95Q.Acc_y >> 8) & 0XFF;
+		sendData[10] = my_95Q.Acc_y & 0xFF;
+		sendData[11] = (my_95Q.Acc_z >> 8) & 0xFF;
+		sendData[12] = my_95Q.Acc_z & 0xFF;
+		sendData[13] = (my_95Q.Gyro_x >> 8) & 0XFF;
+		sendData[14] = my_95Q.Gyro_x & 0xFF;
+		sendData[15] = (my_95Q.Gyro_y >> 8) & 0XFF;
+		sendData[16] = my_95Q.Gyro_y & 0xFF;
+		sendData[17] = (my_95Q.Gyro_z >> 8) & 0XFF;
+		sendData[18] = my_95Q.Gyro_z >> 8 & 0xFF;
+		sendData[19] = (my_95Q.Q0 >> 8) & 0xFF;
+		sendData[20] = my_95Q.Q0 & 0xFF;
+		sendData[21] = (my_95Q.Q1 >> 8) & 0xFF;
+		sendData[22] = my_95Q.Q1 & 0xFF;
+		sendData[23] = (my_95Q.Q2 >> 8) & 0xFF;
+		sendData[24] = my_95Q.Q2 & 0xFF;
+		sendData[25] = (my_95Q.Q3 >> 8) & 0xFF;
+		sendData[26] = my_95Q.Q3 & 0xFF;
 		sendData[27] = (((int)pulse.distance) >> 8) & 0xFF;
 		sendData[28] = ((int)pulse.distance) & 0xFF;
 		sendData[29] = (((int)pulse2.distance) >> 8) & 0xFF;
@@ -408,17 +387,21 @@ void Sensor_Task(void *argument)
 
 void IMU_Task(void *argument)
 {
-	uint8_t str[30];
-	gy95t_init();
-	sprintf(str, "IMU init sucess\r\n");
-	HAL_UART_Transmit(&huart1, str, strlen(str), HAL_MAX_DELAY);
-	while (1)
+	uint32_t tick_delay = pdMS_TO_TICKS(200);
+	uint8_t inited = 0;
+	uint8_t debug[30];
+	do {
+		inited = gy95_Init(&td);
+		sprintf(debug, "IMU not inited\n");
+		HAL_UART_Transmit(&huart3, debug, sizeof(debug), HAL_MAX_DELAY);
+		vTaskDelay(tick_delay);
+	    } while (inited != 1);
+	while(1)
 	{
-		gy95t_read_all(imu_gy95t);
-		// use uart to printf something
-		sprintf(str, "IMU: ax: %d, ay: %d az: %d\r\n", imu_gy95t.Acc_x, imu_gy95t.Acc_y, imu_gy95t.Acc_z);
-		HAL_UART_Transmit(&huart1, str, strlen(str), HAL_MAX_DELAY);
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		sprintf(debug, "IMU is inited\n");
+		HAL_UART_Transmit(&huart3, debug, sizeof(debug), HAL_MAX_DELAY);
+		gy95_All(&my_95Q);
+		vTaskDelay(tick_delay);
 	}
 }
 /* USER CODE END Application */

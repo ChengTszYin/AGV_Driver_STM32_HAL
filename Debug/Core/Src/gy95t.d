@@ -1,5 +1,5 @@
 Core/Src/gy95t.o: ../Core/Src/gy95t.c ../Core/Inc/gy95t.h \
- ../Core/Inc/i2c.h ../Core/Inc/main.h \
+ ../Core/Inc/gy95REG.h ../Core/Inc/i2c.h ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h \
  ../Core/Inc/stm32f1xx_hal_conf.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_rcc.h \
@@ -28,6 +28,7 @@ Core/Src/gy95t.o: ../Core/Src/gy95t.c ../Core/Inc/gy95t.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  ../Core/Inc/usart.h
 ../Core/Inc/gy95t.h:
+../Core/Inc/gy95REG.h:
 ../Core/Inc/i2c.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:

@@ -1,5 +1,9 @@
 .metadata/
 .settings/
+<<<<<<< HEAD
+=======
+.vscode/
+>>>>>>> b21b48ab2a3a4b843e17bde20bcceeb6252a666a
 *.ld
 *.o
 *.hex
@@ -15,4 +19,11 @@
 *.scvd
 *.iex
 
+<<<<<<< HEAD
 Debug
+=======
+*.launch
+*.cfg
+Debug
+Release
+>>>>>>> b21b48ab2a3a4b843e17bde20bcceeb6252a666a
