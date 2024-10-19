@@ -1,2 +1,3 @@
 ../Core/Src/gy95t.c:13:6:iic_read	3
-../Core/Src/gy95t.c:35:6:gy95_All	1
+../Core/Src/gy95t.c:36:9:gy95_Init	4
+../Core/Src/gy95t.c:57:6:gy95_All	1

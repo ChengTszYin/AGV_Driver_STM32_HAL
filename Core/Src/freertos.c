@@ -24,7 +24,6 @@
 #include "usart.h"
 #include "i2c.h"
 #include "gpio.h"
-//#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -33,6 +32,7 @@
 #include "DDSMLib.h"
 #include "gy95t.h"
 #include "SR04.h"
+#include "i2c.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -118,6 +118,12 @@ void distance_Calculate()
 uint8_t receiveBytes[8];
 uint8_t receiveBuff[8];
 
+extern i2c_tx_complete;
+extern i2c_rx_complete;
+
+uint8_t data_L;
+uint8_t data_H;
+
 extern uint8_t responseBuffer[25];
 extern uint8_t responseBufferH[10];
 extern uint8_t responseBufferL[10];
@@ -156,7 +162,7 @@ void Feedback_Task(void *argument);
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+//void StartDefaultTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -226,11 +232,11 @@ void MX_FREERTOS_Init(void) {
 //void StartDefaultTask(void const * argument)
 //{
 //  /* USER CODE BEGIN StartDefaultTask */
-//  /* Infinite loop */
-//  for(;;)
-//  {
-//    osDelay(1);
-//  }
+////  /* Infinite loop */
+////  for(;;)
+////  {
+////    osDelay(1);
+////  }
 //  /* USER CODE END StartDefaultTask */
 //}
 
@@ -255,6 +261,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		}
 	}
 }
+
+//void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+//{
+//	if(hi2c == &hi2c1)
+//	{
+//		i2c_tx_complete = 1;
+//	}
+//}
+//
+//void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+//{
+//    if(hi2c == &hi2c1)
+//    {
+//    	i2c_rx_complete = 1;
+//    }
+//}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -382,14 +404,18 @@ void Sensor_Task(void *argument)
 void IMU_Task(void *argument)
 {
 	uint32_t tick_delay = pdMS_TO_TICKS(200);
-	iic_read(0x02,&td,1);
-	while(td != 1)
-	{
-	    iic_read(0x02,&td,1);
+	uint8_t inited = 0;
+	uint8_t debug[30];
+	do {
+		inited = gy95_Init(&td);
+		sprintf(debug, "IMU not inited\n");
+		HAL_UART_Transmit(&huart3, debug, sizeof(debug), HAL_MAX_DELAY);
 		vTaskDelay(tick_delay);
-	}
+	    } while (inited != 1);
 	while(1)
 	{
+		sprintf(debug, "IMU is inited\n");
+		HAL_UART_Transmit(&huart3, debug, sizeof(debug), HAL_MAX_DELAY);
 		gy95_All(&my_95Q);
 		vTaskDelay(tick_delay);
 	}

@@ -1,12 +1,13 @@
 /*
  * gy95REG.h
  *
- *  Created on: Oct 16, 2024
+ *  Created on: Oct 19, 2024
  *      Author: chengty
  */
 
 #ifndef INC_GY95REG_H_
 #define INC_GY95REG_H_
+
 
 #define ReadWrite 0x07
 #define ACC_X_L 0x08

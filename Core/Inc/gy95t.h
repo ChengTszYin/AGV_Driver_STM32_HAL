@@ -1,7 +1,7 @@
 /*
- * gh95t.h
+ * gy95t.h
  *
- *  Created on: Oct 16, 2024
+ *  Created on: Oct 19, 2024
  *      Author: chengty
  */
 
@@ -34,5 +34,8 @@ typedef struct
 void iic_read(uint8_t add, uint8_t *data, uint8_t len);
 
 void gy95_All(gy* gy95t);
+
+uint8_t gy95_Init(uint8_t *data);
+
 
 #endif /* INC_GY95T_H_ */
