@@ -24,7 +24,7 @@
 #include "usart.h"
 #include "i2c.h"
 #include "gpio.h"
-// #include "cmsis_os.h"
+#include "tim.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -32,7 +32,7 @@
 #include <string.h>
 #include "DDSMLib.h"
 #include "gy95t.h"
-#include "SR04.h"
+#include "sr04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,12 +49,15 @@ typedef struct
 } MotorControl;
 
 uint8_t d80nk_[4];
-extern SR04_PulseType pulse;
-extern SR04_PulseType pulse2;
+extern uint16_t distance1;
+extern uint16_t distance2;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+
+
 uint8_t checksum(uint8_t *data, uint8_t len)
 {
 	uint8_t crc = 0;
@@ -105,15 +108,6 @@ void d80nk_read()
 	}
 }
 
-void distance_Calculate()
-{
-	SR04_Calculate(&pulse);
-	SR04_Calculate(&pulse2);
-	if (pulse.distance > 80.0)
-		pulse.distance = 80.0;
-	if (pulse2.distance > 80.0)
-		pulse2.distance = 80.0;
-}
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -152,19 +146,19 @@ void Sensor_Task(void *argument);
 void IMU_Task(void *argument);
 void Feedback_Task(void *argument);
 /* USER CODE END Variables */
-// osThreadId defaultTaskHandle;
+//osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-//void StartDefaultTask(void const *argument);
+void StartDefaultTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* GetIdleTaskMemory prototype (linked to static allocation support) */
-void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize);
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
@@ -180,43 +174,43 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackTyp
 /* USER CODE END GET_IDLE_TASK_MEMORY */
 
 /**
- * @brief  FreeRTOS initialization
- * @param  None
- * @retval None
- */
-void MX_FREERTOS_Init(void)
-{
-	/* USER CODE BEGIN Init */
+  * @brief  FreeRTOS initialization
+  * @param  None
+  * @retval None
+  */
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* USER CODE BEGIN RTOS_MUTEX */
+  /* USER CODE BEGIN RTOS_MUTEX */
 	/* add mutexes, ... */
-	/* USER CODE END RTOS_MUTEX */
+  /* USER CODE END RTOS_MUTEX */
 
-	/* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
 	/* add semaphores, ... */
-	/* USER CODE END RTOS_SEMAPHORES */
+  /* USER CODE END RTOS_SEMAPHORES */
 
-	/* USER CODE BEGIN RTOS_TIMERS */
+  /* USER CODE BEGIN RTOS_TIMERS */
 	/* start timers, add new ones, ... */
-	/* USER CODE END RTOS_TIMERS */
+  /* USER CODE END RTOS_TIMERS */
 
-	/* USER CODE BEGIN RTOS_QUEUES */
+  /* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
-	/* USER CODE END RTOS_QUEUES */
+  /* USER CODE END RTOS_QUEUES */
 
-	/* Create the thread(s) */
-	/* definition and creation of defaultTask */
-	//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-	//  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
+//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+//  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-	/* USER CODE BEGIN RTOS_THREADS */
+  /* USER CODE BEGIN RTOS_THREADS */
 	xTaskCreate(Serial_Task, "Serial_Task_", 128, NULL, 4, &Serial_Task_Handler);
 	xTaskCreate(Sensor_Task, "Sensor_Task", 128, NULL, 3, &Sensor_Task_Handler);
 	xTaskCreate(IMU_Task, "IMU_Task", 128, NULL, 3, IMU_Task_Handler);
 	xTaskCreate(Feedback_Task, "Feedback_Task", 128, NULL, 3, Feedback_Task_Handler);
-	/* USER CODE END RTOS_THREADS */
+  /* USER CODE END RTOS_THREADS */
+
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -226,16 +220,16 @@ void MX_FREERTOS_Init(void)
  * @retval None
  */
 /* USER CODE END Header_StartDefaultTask */
-// void StartDefaultTask(void const * argument)
-//{
-//   /* USER CODE BEGIN StartDefaultTask */
+void StartDefaultTask(void const * argument)
+{
+  /* USER CODE BEGIN StartDefaultTask */
 //   /* Infinite loop */
 //   for(;;)
 //   {
 //     osDelay(1);
 //   }
-//   /* USER CODE END StartDefaultTask */
-// }
+  /* USER CODE END StartDefaultTask */
+}
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
@@ -357,10 +351,10 @@ void Feedback_Task(void *argument)
 		sendData[24] = my_95Q.Q2 & 0xFF;
 		sendData[25] = (my_95Q.Q3 >> 8) & 0xFF;
 		sendData[26] = my_95Q.Q3 & 0xFF;
-		sendData[27] = (((int)pulse.distance) >> 8) & 0xFF;
-		sendData[28] = ((int)pulse.distance) & 0xFF;
-		sendData[29] = (((int)pulse2.distance) >> 8) & 0xFF;
-		sendData[30] = ((int)pulse2.distance) & 0xFF;
+		sendData[27] = (distance1 >> 8) & 0xFF;
+		sendData[28] = (distance1) & 0xFF;
+		sendData[29] = (distance2 >> 8) & 0xFF;
+		sendData[30] = (distance2) & 0xFF;
 		sendData[31] = d80nk_[0] & 0xFF;
 		sendData[32] = d80nk_[1] & 0xFF;
 		sendData[33] = d80nk_[2] & 0xFF;
@@ -373,12 +367,17 @@ void Feedback_Task(void *argument)
 
 void Sensor_Task(void *argument)
 {
-	SR04_Init();
+	uint32_t send_delay = pdMS_TO_TICKS(100);
+	HAL_TIM_Base_Start(&htim2);
+	HAL_TIM_IC_Start_IT(&htim2,TIM_CHANNEL_1);
+	HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_1);
 	while (1)
 	{
-		SR04_Start();
+		HCSR04_Read();
+		_HCSR04_Read();
 		d80nk_read();
-		distance_Calculate();
+		vTaskDelay(send_delay);
 	}
 }
 
@@ -405,3 +404,4 @@ void IMU_Task(void *argument)
 	}
 }
 /* USER CODE END Application */
+

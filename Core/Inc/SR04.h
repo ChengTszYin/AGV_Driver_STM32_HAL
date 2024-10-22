@@ -1,30 +1,29 @@
-#ifndef SR04_H
-#define SR04_H
+/*
+ * sr04.h
+ *
+ *  Created on: Oct 23, 2024
+ *      Author: chengty
+ */
+
+#ifndef INC_SR04_H_
+#define INC_SR04_H_
 
 #include "main.h"
 #include "tim.h"
-#include "stdio.h"
-
-
-#define SPEED 				340.0f
-#define SR04_COUNT_PERIOD 	10000
-
+#include "stm32f1xx_hal.h"
 
 typedef struct
 {
-	uint16_t start;
-	uint16_t end;
-	uint16_t cnt;
-	float distance;
-	uint8_t rising_flag;
-}SR04_PulseType;
+	TIM_HandleTypeDef *htim;
+	GPIO_TypeDef *port;
+	uint16_t pin;
+} sr04_t;
 
 
-//extern SR04_PulseType pulse;
-//extern SR04_PulseType pulse2;
+void delay_us(uint16_t time);
 
-void SR04_Init();
-void SR04_Start();
-void SR04_Calculate();
+uint16_t HCSR04_Read();
 
-#endif
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
+
+#endif /* INC_SR04_H_ */

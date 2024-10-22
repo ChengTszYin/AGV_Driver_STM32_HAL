@@ -35,9 +35,9 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  ../Core/Inc/usart.h ../Core/Inc/main.h ../Core/Inc/i2c.h \
- ../Core/Inc/gpio.h ../Core/Inc/DDSMLib.h ../Core/Inc/gy95t.h \
- ../Core/Inc/gy95REG.h ../Core/Inc/i2c.h ../Core/Inc/SR04.h \
- ../Core/Inc/tim.h
+ ../Core/Inc/gpio.h ../Core/Inc/tim.h ../Core/Inc/DDSMLib.h \
+ ../Core/Inc/gy95t.h ../Core/Inc/gy95REG.h ../Core/Inc/i2c.h \
+ ../Core/Inc/sr04.h ../Core/Inc/tim.h
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 ../Core/Inc/FreeRTOSConfig.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
@@ -78,9 +78,10 @@ Core/Src/freertos.o: ../Core/Src/freertos.c \
 ../Core/Inc/main.h:
 ../Core/Inc/i2c.h:
 ../Core/Inc/gpio.h:
+../Core/Inc/tim.h:
 ../Core/Inc/DDSMLib.h:
 ../Core/Inc/gy95t.h:
 ../Core/Inc/gy95REG.h:
 ../Core/Inc/i2c.h:
-../Core/Inc/SR04.h:
+../Core/Inc/sr04.h:
 ../Core/Inc/tim.h:
