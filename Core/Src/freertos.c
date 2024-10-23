@@ -42,10 +42,14 @@
 
 typedef struct
 {
-	uint8_t LeftID;
-	uint8_t RightID;
-	short LeftSpeed;
-	short RightSpeed;
+	uint8_t HLeftID;
+	uint8_t HRightID;
+	uint8_t LLeftID;
+	uint8_t LRightID;
+	short HLeftSpeed;
+	short HRightSpeed;
+	short LLeftSpeed;
+	short LRightSpeed;
 } MotorControl;
 
 uint8_t d80nk_[4];
@@ -70,18 +74,22 @@ uint8_t checksum(uint8_t *data, uint8_t len)
 
 void HostMessageParse(uint8_t *receiveBytes, MotorControl *motors)
 {
-	uint8_t data[8];
-	for (uint8_t i = 0; i < 8; i++)
+	uint8_t data[14];
+	for (uint8_t i = 0; i < 14; i++)
 	{
 		data[i] = receiveBytes[i];
 	}
-	uint8_t checking = checksum(data, 8);
-	if (checking == data[7])
+	uint8_t checking = checksum(data, 14);
+	if (checking == data[13])
 	{
-		motors->LeftID = data[1];
-		motors->LeftSpeed = (data[2] << 8) | data[3];
-		motors->RightID = data[4];
-		motors->RightSpeed = (data[5] << 8) | data[6];
+		motors->HLeftID = data[1];
+		motors->HLeftSpeed = (data[2] << 8) | data[3];
+		motors->HRightID = data[4];
+		motors->HRightSpeed = (data[5] << 8) | data[6];
+		motors->LLeftID = data[7];
+		motors->LLeftSpeed = (data[8] << 8) | data[9];
+		motors->LRightID = data[10];
+		motors->LRightSpeed = (data[11] << 8) | data[12];
 	}
 	memset(receiveBytes, 0, sizeof(receiveBytes));
 }
@@ -112,8 +120,8 @@ void d80nk_read()
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-uint8_t receiveBytes[8];
-uint8_t receiveBuff[8];
+uint8_t receiveBytes[14];
+uint8_t receiveBuff[14];
 
 
 extern uint8_t responseBuffer[25];
@@ -270,7 +278,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		short arraysz = sizeof(responseBuffer) / sizeof(*responseBuffer);
 		for (int i = 0; i < arraysz; i++)
 		{
-			if (responseBuffer[i] == motors.LeftID)
+			if (responseBuffer[i] == motors.HLeftID)
 			{
 				uint8_t sigmentBuffer[10];
 				memcpy(sigmentBuffer, &responseBuffer[i], 10);
@@ -280,7 +288,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 					memcpy(responseBufferL, &responseBuffer[i], 10);
 				}
 			}
-			else if (responseBuffer[i] == motors.RightID)
+			else if (responseBuffer[i] == motors.HRightID)
 			{
 				uint8_t sigmentBuffer[10];
 				memcpy(sigmentBuffer, &responseBuffer[i], 10);
@@ -304,9 +312,13 @@ void Serial_Task(void *argument)
 	uint32_t send_delay = pdMS_TO_TICKS(100);
 	while (1)
 	{
-		setVelocity(motors.LeftID, motors.LeftSpeed, 0);
-		vTaskDelay(L_R_delay);
-		setVelocity(motors.RightID, motors.RightSpeed, 0);
+		setVelocity(motors.HLeftID, motors.HLeftSpeed, 0);
+		vTaskDelay(L_R_delay * 3);
+		setVelocity(motors.HRightID, motors.HRightSpeed, 0);
+		vTaskDelay(L_R_delay * 2);
+		setVelocity(motors.LLeftID, motors.LLeftSpeed, 0);
+		vTaskDelay(L_R_delay * 1);
+		setVelocity(motors.LRightID, motors.LRightSpeed, 0);
 		receiveFromBuffer();
 		Parse_DMA_All(&wheelsensor, timerCounter);
 		vTaskDelay(send_delay);
