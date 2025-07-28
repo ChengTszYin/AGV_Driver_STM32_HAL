@@ -1,0 +1,12 @@
+../Core/Src/freertos.c:63:9:checksum	2
+../Core/Src/freertos.c:73:6:HostMessageParse	3
+../Core/Src/freertos.c:95:6:d80nk_read	3
+../Core/Src/freertos.c:173:6:vApplicationGetIdleTaskMemory	1
+../Core/Src/freertos.c:187:6:MX_FREERTOS_Init	1
+../Core/Src/freertos.c:230:6:StartDefaultTask	1
+../Core/Src/freertos.c:243:6:HAL_TIM_PeriodElapsedCallback	4
+../Core/Src/freertos.c:263:6:HAL_UART_RxCpltCallback	12
+../Core/Src/freertos.c:327:6:Serial_Task	1
+../Core/Src/freertos.c:353:6:Feedback_Task	1
+../Core/Src/freertos.c:407:6:Sensor_Task	1
+../Core/Src/freertos.c:426:6:IMU_Task	2
