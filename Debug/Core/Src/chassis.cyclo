@@ -1,0 +1,11 @@
+../Core/Src/chassis.cpp:10:1:Chassis::Chassis(uint8_t*, int)	3
+../Core/Src/chassis.cpp:25:9:uint8_t Chassis::checksum(uint8_t*, uint8_t)	2
+../Core/Src/chassis.cpp:35:9:uint8_t Chassis::m_checkCRC(uint8_t*)	3
+../Core/Src/chassis.cpp:51:6:void Chassis::HostMessageParse(uint8_t*)	4
+../Core/Src/chassis.cpp:88:6:void Chassis::MotorMessageSend()	1
+../Core/Src/chassis.cpp:144:6:void Chassis::setMotors()	1
+../Core/Src/chassis.cpp:164:6:void Chassis::writeBuffer(uint8_t, uint8_t*)	4
+../Core/Src/chassis.cpp:184:14:const short int* Chassis::get_C_Velocity() const	1
+../Core/Src/chassis.cpp:189:6:void Chassis::d80nk_read()	3
+../Core/Src/chassis.cpp:211:6:void Chassis::run_sensors()	1
+../Core/Src/chassis.cpp:220:6:void Chassis::run_imu()	2

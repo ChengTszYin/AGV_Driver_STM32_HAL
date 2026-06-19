@@ -1,0 +1,13 @@
+../Core/Inc/CRC.h:13:9:reverseBits	24	static
+../Core/Inc/CRC.h:25:9:crc8	48	static
+../Core/Inc/CRC.h:47:10:crc16	48	static
+../Core/Inc/CRC.h:69:10:crc32	48	static
+../Core/Src/DDSMLib.c:39:6:sort	32	static
+../Core/Src/DDSMLib.c:55:7:mid_filter	48	static
+../Core/Src/DDSMLib.c:70:9:checkCRC	32	static
+../Core/Src/DDSMLib.c:81:6:receiveFromBuffer	8	static
+../Core/Src/DDSMLib.c:88:6:send	32	static
+../Core/Src/DDSMLib.c:97:6:setID	32	static
+../Core/Src/DDSMLib.c:103:6:setMode	32	static
+../Core/Src/DDSMLib.c:109:6:Parse_DMA_All	48	static
+../Core/Src/DDSMLib.c:210:9:setVelocity	40	static
