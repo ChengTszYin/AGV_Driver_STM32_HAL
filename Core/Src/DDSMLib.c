@@ -14,27 +14,18 @@ uint8_t CRC8_MAXIM_REFOUT = 1;
 
 extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
-short velocityHR;
-short velocityHL;
-short velocityLR;
-short velocityLL;
+short velocity[MAX_MOTORS];
 
-uint8_t responseBuffer[45];
-uint8_t responseBufferHL[10];
-uint8_t responseBufferHR[10];
-uint8_t responseBufferLL[10];
-uint8_t responseBufferLR[10];
-struct motor_sensor_t wheelsensor;
+uint8_t responseBuffer[65];
+uint8_t responseBuffer_module[MAX_MOTORS][10];
+
 uint8_t commandBuffer[10];
 
-short HLeftVelocityHistory[FILTER_SIZE] = {0};
-short HRightVelocityHistory[FILTER_SIZE] = {0};
-short LLeftVelocityHistory[FILTER_SIZE] = {0};
-short LRightVelocityHistory[FILTER_SIZE] = {0};
-int HLeftIndex = 0;
-int HRightIndex = 0;
-int LLeftIndex = 0;
-int LRightIndex = 0;
+short velocityHistory[MAX_MOTORS][FILTER_SIZE] = {0};
+int   velocityIndex[MAX_MOTORS] = {0};
+
+
+uint8_t motor_count = 0;
 
 void sort(short* array, int size)
 {
@@ -77,7 +68,6 @@ uint8_t checkCRC(uint8_t *Buffer)
 		}
 	else return 0;
 }
-
 void receiveFromBuffer()
 {
 	HAL_UART_Receive_DMA(&huart2, responseBuffer, 25);
@@ -106,105 +96,42 @@ void setMode(uint8_t id, ddsm115_mode_t mode){
 }
 
 
-void Parse_DMA_All(struct motor_sensor_t* sensor, uint8_t connected)
+void Parse_DMA_All(motor_sensor_t* motors, uint8_t connected)
 {
 	if (!connected)
 	{
-		if(sizeof(responseBufferHL)>0)
+		for(int i = 0; i < MAX_MOTORS; ++i)
+		{
+			if(sizeof(responseBuffer_module[i]) > 0)
 			{
-				sensor->Hleftii = responseBufferHL[0];
-				sensor->HleftMode = (ddsm115_mode_t)responseBufferHL[1];
-				uint16_t current = (uint16_t)(responseBufferHL[2]) << 8 | (uint16_t)(responseBufferHL[3]);
+				motors[i].id = responseBuffer_module[i][0];
+				motors[i].mode = responseBuffer_module[i][1];
+				uint16_t current = (uint16_t)(responseBuffer_module[i][2]) << 8 | (uint16_t)(responseBuffer_module[i][3]);
 				short currentR = current;
 				if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
 				if (currentR >= 0) {
-					sensor->HleftCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
+					motors[i].current = (float)currentR * (float)MAX_CURRENT / 32767.0;
 				} else {
-					sensor->HleftCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
+					motors[i].current = (float)currentR * (float)MIN_CURRENT / -32767.0;
 				}
-				uint16_t velocity = (uint16_t)(responseBufferHL[4] << 8 | (uint16_t)(responseBufferHL[5]));
-				velocityHL = velocity;
-				if (velocityHL  > MAX_VELOCITY){ velocityHL -= 0xFFFF; velocityHL--; }
-				short filteredHLeftVelocity = mid_filter(velocityHL, HLeftVelocityHistory, &HLeftIndex);
-				sensor->HLeftVelocity = filteredHLeftVelocity;
-				sensor->HLeftwinding_temp = responseBufferHL[6];
-				sensor->HLeftangle = round((float)responseBufferHL[7] * (float)MAX_ANGLE / 255.0);
-				sensor->HLefterror = responseBufferHL[8];
+				uint16_t _velocity = (uint16_t)(responseBuffer_module[i][4] << 8 | (uint16_t)(responseBuffer_module[i][5]));
+				velocity[i] = _velocity;
+				if (velocity[i]  > MAX_VELOCITY){ velocity[i] -= 0xFFFF; velocity[i]--; }
+				short filteredVelocity = mid_filter(velocity[i], velocityHistory[i], &velocityIndex[i]);
+				motors[i].velocity = filteredVelocity;
+				motors[i].winding_temp = responseBuffer_module[i][6];
+				motors[i].angle = round((float)responseBuffer_module[i][7] * (float)MAX_ANGLE / 255.0);
+				motors[i].error = responseBuffer_module[i][8];
 			}
-		if(sizeof(responseBufferHR)>0)
-		{
-			sensor->Hrightii = responseBufferHR[0];
-			sensor->HrightMode = (ddsm115_mode_t)responseBufferHR[1];
-			uint16_t current = (uint16_t)(responseBufferHR[2]) << 8 | (uint16_t)(responseBufferHR[3]);
-			short currentR = current;
-			if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-			if (currentR >= 0) {
-				sensor->HrightCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-			} else {
-				sensor->HrightCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-			}
-			uint16_t velocity = (uint16_t)(responseBufferHR[4] << 8 | (uint16_t)(responseBufferHR[5]));
-			velocityHR = velocity;
-			if (velocityHR  > MAX_VELOCITY){ velocityHR -= 0xFFFF; velocityHR--; }
-			short filteredHRightVelocity = mid_filter(velocityHR, HRightVelocityHistory, &HRightIndex);
-			sensor->HRightVelocity = filteredHRightVelocity;
-			sensor->HRightwinding_temp = responseBufferHR[6];
-			sensor->HRightangle = round((float)responseBufferHR[7] * (float)MAX_ANGLE / 255.0);
-			sensor->HRighterror = responseBufferHR[8];
-		}
-
-		if(sizeof(responseBufferLL)>0)
-		{
-			sensor->Lleftii = responseBufferHL[0];
-			sensor->LleftMode = (ddsm115_mode_t)responseBufferLL[1];
-			uint16_t current = (uint16_t)(responseBufferLL[2]) << 8 | (uint16_t)(responseBufferLL[3]);
-			short currentR = current;
-			if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-			if (currentR >= 0) {
-				sensor->LleftCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-			} else {
-				sensor->LleftCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-			}
-			uint16_t velocity = (uint16_t)(responseBufferLL[4] << 8 | (uint16_t)(responseBufferLL[5]));
-			velocityLL = velocity;
-			if (velocityLL  > MAX_VELOCITY){ velocityLL -= 0xFFFF; velocityLL--; }
-			short filteredLLeftVelocity = mid_filter(velocityLL, LLeftVelocityHistory, &LLeftIndex);
-			sensor->LLeftVelocity = filteredLLeftVelocity;
-			sensor->LLeftwinding_temp = responseBufferLL[6];
-			sensor->LLeftangle = round((float)responseBufferLL[7] * (float)MAX_ANGLE / 255.0);
-			sensor->LLefterror = responseBufferLL[8];
-		}
-		if(sizeof(responseBufferLR)>0)
-		{
-			sensor->Lrightii = responseBufferLR[0];
-			sensor->LrightMode = (ddsm115_mode_t)responseBufferLR[1];
-			uint16_t current = (uint16_t)(responseBufferLR[2]) << 8 | (uint16_t)(responseBufferLR[3]);
-			short currentR = current;
-			if (currentR  > 32767){ currentR -= 0xFFFF; currentR--; }
-			if (currentR >= 0) {
-				sensor->LrightCurrent = (float)currentR * (float)MAX_CURRENT / 32767.0;
-			} else {
-				sensor->LrightCurrent = (float)currentR * (float)MIN_CURRENT / -32767.0;
-			}
-			uint16_t velocity = (uint16_t)(responseBufferLR[4] << 8 | (uint16_t)(responseBufferLR[5]));
-			velocityLR = velocity;
-			if (velocityLR  > MAX_VELOCITY){ velocityLR -= 0xFFFF; velocityLR--; }
-			short filteredLRightVelocity = mid_filter(velocityLR, LRightVelocityHistory, &LRightIndex);
-			sensor->LRightVelocity = filteredLRightVelocity;
-			sensor->LRightwinding_temp = responseBufferLR[6];
-			sensor->LRightangle = round((float)responseBufferLR[7] * (float)MAX_ANGLE / 255.0);
-			sensor->LRighterror = responseBufferLR[8];
 		}
 	}
 	else
 	{
-		sensor->HLeftVelocity = 0;
-		sensor->HRightVelocity = 0;
-		sensor->LLeftVelocity = 0;
-		sensor->LRightVelocity = 0;
+		for(int i = 0; i < MAX_MOTORS; ++i)
+		{
+			motors[i].velocity = 0;
+		}
 	}
-
-
 }
 
 uint8_t setVelocity(uint8_t id, int16_t velocity, uint8_t acceleration)

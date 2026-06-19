@@ -37,21 +37,18 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+#define MAX_MOTORS 6
+#define HOSTMESSAGESZ 20
+
 #define NUM_PROX 5
 
 #define iic_add 0xa4 >> 1
 
 typedef struct
 {
-	uint8_t HLeftID;
-	uint8_t HRightID;
-	uint8_t LLeftID;
-	uint8_t LRightID;
-	short HLeftSpeed;
-	short HRightSpeed;
-	short LLeftSpeed;
-	short LRightSpeed;
-} MotorControl;
+	uint8_t m_id;
+	short m_speed;
+} MotorCmd_t;
 
 uint8_t d80nk_[4];
 extern uint16_t distance1;
@@ -70,24 +67,28 @@ uint8_t checksum(uint8_t *data, uint8_t len)
 	return crc;
 }
 
-void HostMessageParse(uint8_t *receiveBytes, MotorControl *motors)
+void HostMessageParse(uint8_t *receiveBytes, MotorCmd_t *m_motors)
 {
-	uint8_t data[14];
-	for (uint8_t i = 0; i < 14; i++)
+	uint8_t data[HOSTMESSAGESZ];
+	for (uint8_t i = 0; i < HOSTMESSAGESZ; i++)
 	{
 		data[i] = receiveBytes[i];
 	}
-	uint8_t checking = checksum(data, 14);
-	if (checking == data[13])
+	uint8_t checking = checksum(data, HOSTMESSAGESZ);
+	if (checking == data[19])
 	{
-		motors->HLeftID = data[1];
-		motors->HLeftSpeed = (data[2] << 8) | data[3];
-		motors->HRightID = data[4];
-		motors->HRightSpeed = (data[5] << 8) | data[6];
-		motors->LLeftID = data[7];
-		motors->LLeftSpeed = (data[8] << 8) | data[9];
-		motors->LRightID = data[10];
-		motors->LRightSpeed = (data[11] << 8) | data[12];
+		m_motors[0].m_id = data[1];
+		m_motors[0].m_speed = (data[2] << 8) | data[3];
+		m_motors[1].m_id = data[4];
+		m_motors[1].m_speed = (data[5] << 8) | data[6];
+		m_motors[2].m_id = data[7];
+		m_motors[2].m_speed = (data[8] << 8) | data[9];
+		m_motors[3].m_id = data[10];
+		m_motors[3].m_speed = (data[11] << 8) | data[12];
+		m_motors[4].m_id = data[13];
+		m_motors[4].m_speed = (data[14] << 8) | data[15];
+		m_motors[5].m_id = data[16];
+		m_motors[5].m_speed = (data[17] << 8) | data[18];
 	}
 	memset(receiveBytes, 0, sizeof(receiveBytes));
 }
@@ -122,15 +123,12 @@ uint8_t receiveBuff[14];
 
 
 extern uint8_t responseBuffer[45];
-extern uint8_t responseBufferHL[10];
-extern uint8_t responseBufferHR[10];
-extern uint8_t responseBufferLL[10];
-extern uint8_t responseBufferLR[10];
+extern uint8_t responseBuffer_module[MAX_MOTORS][10];
 
 extern uint8_t commandBuffer[10];
-extern struct motor_sensor_t wheelsensor;
+motor_sensor_t wheelsensor[MAX_MOTORS];
 
-MotorControl motors;
+MotorCmd_t m_motors[MAX_MOTORS];
 uint32_t L_R_delay = pdMS_TO_TICKS(4);
 
 gy my_95Q;
@@ -265,7 +263,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if (huart == &huart1)
 	{
 		memcpy(receiveBytes, receiveBuff, sizeof(receiveBuff));
-		HostMessageParse(receiveBytes, &motors);
+		HostMessageParse(receiveBytes, &m_motors);
 		HAL_UART_Receive_DMA(&huart1, receiveBuff, sizeof(receiveBuff));
 	}
 
@@ -277,44 +275,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		short arraysz = sizeof(responseBuffer) / sizeof(*responseBuffer);
 		for (int i = 0; i < arraysz; i++)
 		{
-			if (responseBuffer[i] == motors.HLeftID)
+			for(int j = 0; j < MAX_MOTORS; ++j)
 			{
-				uint8_t sigmentBuffer[10];
-				memcpy(sigmentBuffer, &responseBuffer[i], 10);
-				uint8_t checking = checkCRC(&sigmentBuffer);
-				if (checking)
+				if(responseBuffer[i] == wheelsensor[j].id)
 				{
-					memcpy(responseBufferHL, &responseBuffer[i], 10);
-				}
-			}
-			else if (responseBuffer[i] == motors.HRightID)
-			{
-				uint8_t sigmentBuffer[10];
-				memcpy(sigmentBuffer, &responseBuffer[i], 10);
-				uint8_t checking = checkCRC(&sigmentBuffer);
-				if (checking)
-				{
-					memcpy(responseBufferHR, &responseBuffer[i], 10);
-				}
-			}
-			else if (responseBuffer[i] == motors.LLeftID)
-			{
-				uint8_t sigmentBuffer[10];
-				memcpy(sigmentBuffer, &responseBuffer[i], 10);
-				uint8_t checking = checkCRC(&sigmentBuffer);
-				if (checking)
-				{
-					memcpy(responseBufferLL, &responseBuffer[i], 10);
-				}
-			}
-			else if (responseBuffer[i] == motors.LRightID)
-			{
-				uint8_t sigmentBuffer[10];
-				memcpy(sigmentBuffer, &responseBuffer[i], 10);
-				uint8_t checking = checkCRC(&sigmentBuffer);
-				if (checking)
-				{
-					memcpy(responseBufferLR, &responseBuffer[i], 10);
+					uint8_t sigmentBuffer[10];
+					memcpy(sigmentBuffer, &responseBuffer[i], 10);
+					uint8_t checking = checkCRC(&sigmentBuffer);
+					if(checking)
+					{
+						memcpy(responseBuffer_module[j], &responseBuffer[i], 10);
+					}
 				}
 			}
 		}
@@ -332,13 +303,17 @@ void Serial_Task(void *argument)
 	uint32_t send_delay = pdMS_TO_TICKS(100);
 	while (1)
 	{
-		setVelocity(motors.HLeftID, motors.HLeftSpeed, 0);
+		setVelocity(m_motors[0].m_id, m_motors[0].m_speed, 0);
+		vTaskDelay(L_R_delay * 5);
+		setVelocity(m_motors[1].m_id, m_motors[1].m_speed, 0);
+		vTaskDelay(L_R_delay * 4);
+		setVelocity(m_motors[2].m_id, m_motors[2].m_speed, 0);
 		vTaskDelay(L_R_delay * 3);
-		setVelocity(motors.HRightID, motors.HRightSpeed, 0);
+		setVelocity(m_motors[3].m_id, m_motors[3].m_speed, 0);
 		vTaskDelay(L_R_delay * 2);
-		setVelocity(motors.LLeftID, motors.LLeftSpeed, 0);
+		setVelocity(m_motors[4].m_id, m_motors[4].m_speed, 0);
 		vTaskDelay(L_R_delay * 1);
-		setVelocity(motors.LRightID, motors.LRightSpeed, 0);
+		setVelocity(m_motors[5].m_id, m_motors[5].m_speed, 0);
 		receiveFromBuffer();
 		Parse_DMA_All(&wheelsensor, timerCounter);
 		vTaskDelay(send_delay);
@@ -355,50 +330,56 @@ void Feedback_Task(void *argument)
 	uint32_t tick_delay = pdMS_TO_TICKS(200);
 	while(1)
 	{
-		uint8_t sendData[42];
+		uint8_t sendData[48];
 		sendData[0] = 0x00;
-		sendData[1] = (wheelsensor.Hleftii) & 0xFF;
-		sendData[2] = ((wheelsensor.HLeftVelocity)>>8) & 0xFF;
-		sendData[3] = wheelsensor.HLeftVelocity & 0xFF;
-		sendData[4] = wheelsensor.Hrightii & 0xFF;
-		sendData[5] = ((wheelsensor.HRightVelocity)>>8) & 0xFF;
-		sendData[6] = wheelsensor.HRightVelocity & 0xFF;
-		sendData[7] = (wheelsensor.Lleftii) & 0xFF;
-		sendData[8] = ((wheelsensor.LLeftVelocity) >> 8) & 0xFF;
-		sendData[9] = wheelsensor.LLeftVelocity & 0xFF;
-		sendData[10] = (wheelsensor.Lrightii) & 0xFF;
-		sendData[11] = ((wheelsensor.LRightVelocity) >> 8) & 0xFF;
-		sendData[12] = wheelsensor.LRightVelocity & 0xFF;
-		sendData[13] = (my_95Q.Acc_x >> 8) & 0xFF;
-		sendData[14] = my_95Q.Acc_x & 0XFF;
-		sendData[15] = (my_95Q.Acc_y >> 8) & 0XFF;
-		sendData[16] = my_95Q.Acc_y & 0xFF;
-		sendData[17] = (my_95Q.Acc_z >> 8) & 0xFF;
-		sendData[18] = my_95Q.Acc_z & 0xFF;
-		sendData[19] = (my_95Q.Gyro_x >> 8) & 0XFF;
-		sendData[20] = my_95Q.Gyro_x & 0xFF;
-		sendData[21] = (my_95Q.Gyro_y >> 8) & 0XFF;
-		sendData[22] = my_95Q.Gyro_y & 0xFF;
-		sendData[23] = (my_95Q.Gyro_z >> 8) & 0XFF;
-		sendData[24] = my_95Q.Gyro_z >> 8 & 0xFF;
-		sendData[25] = (my_95Q.Q0 >> 8) & 0xFF;
-		sendData[26] = my_95Q.Q0 & 0xFF;
-		sendData[27] = (my_95Q.Q1 >> 8) & 0xFF;
-		sendData[28] = my_95Q.Q1 & 0xFF;
-		sendData[29] = (my_95Q.Q2 >> 8) & 0xFF;
-		sendData[30] = my_95Q.Q2 & 0xFF;
-		sendData[31] = (my_95Q.Q3 >> 8) & 0xFF;
-		sendData[32] = my_95Q.Q3 & 0xFF;
-		sendData[33] = (distance1 >> 8) & 0xFF;
-		sendData[34] = (distance1) & 0xFF;
-		sendData[35] = (distance2 >> 8) & 0xFF;
-		sendData[36] = (distance2) & 0xFF;
-		sendData[37] = d80nk_[0] & 0xFF;
-		sendData[38] = d80nk_[1] & 0xFF;
-		sendData[39] = d80nk_[2] & 0xFF;
-		sendData[40] = d80nk_[3] & 0xFF;
-		sendData[41] = checksum(sendData, 42);
-		HAL_UART_Transmit(&huart1, sendData, 42, HAL_MAX_DELAY);
+		sendData[1] = (wheelsensor[0].id) & 0xFF;
+		sendData[2] = ((wheelsensor[0].velocity)>>8) & 0xFF;
+		sendData[3] = wheelsensor[0].velocity & 0xFF;
+		sendData[4] = wheelsensor[1].id & 0xFF;
+		sendData[5] = ((wheelsensor[1].velocity)>>8) & 0xFF;
+		sendData[6] = wheelsensor[1].velocity & 0xFF;
+		sendData[7] = (wheelsensor[2].id) & 0xFF;
+		sendData[8] = ((wheelsensor[2].velocity) >> 8) & 0xFF;
+		sendData[9] = wheelsensor[2].velocity & 0xFF;
+		sendData[10] = (wheelsensor[3].id) & 0xFF;
+		sendData[11] = ((wheelsensor[3].velocity) >> 8) & 0xFF;
+		sendData[12] = wheelsensor[3].velocity & 0xFF;
+		sendData[13] = (wheelsensor[4].id) & 0xFF;
+		sendData[14] = ((wheelsensor[4].velocity) >> 8) & 0xFF;
+		sendData[15] = wheelsensor[4].velocity & 0xFF;
+		sendData[16] = (wheelsensor[5].id) & 0xFF;
+		sendData[17] = ((wheelsensor[5].velocity) >> 8) & 0xFF;
+		sendData[18] = wheelsensor[5].velocity & 0xFF;
+		sendData[19] = (my_95Q.Acc_x >> 8) & 0xFF;
+		sendData[20] = my_95Q.Acc_x & 0XFF;
+		sendData[21] = (my_95Q.Acc_y >> 8) & 0XFF;
+		sendData[22] = my_95Q.Acc_y & 0xFF;
+		sendData[23] = (my_95Q.Acc_z >> 8) & 0xFF;
+		sendData[24] = my_95Q.Acc_z & 0xFF;
+		sendData[25] = (my_95Q.Gyro_x >> 8) & 0XFF;
+		sendData[26] = my_95Q.Gyro_x & 0xFF;
+		sendData[27] = (my_95Q.Gyro_y >> 8) & 0XFF;
+		sendData[28] = my_95Q.Gyro_y & 0xFF;
+		sendData[29] = (my_95Q.Gyro_z >> 8) & 0XFF;
+		sendData[30] = my_95Q.Gyro_z >> 8 & 0xFF;
+		sendData[31] = (my_95Q.Q0 >> 8) & 0xFF;
+		sendData[32] = my_95Q.Q0 & 0xFF;
+		sendData[33] = (my_95Q.Q1 >> 8) & 0xFF;
+		sendData[34] = my_95Q.Q1 & 0xFF;
+		sendData[35] = (my_95Q.Q2 >> 8) & 0xFF;
+		sendData[36] = my_95Q.Q2 & 0xFF;
+		sendData[37] = (my_95Q.Q3 >> 8) & 0xFF;
+		sendData[38] = my_95Q.Q3 & 0xFF;
+		sendData[39] = (distance1 >> 8) & 0xFF;
+		sendData[40] = (distance1) & 0xFF;
+		sendData[41] = (distance2 >> 8) & 0xFF;
+		sendData[42] = (distance2) & 0xFF;
+		sendData[43] = d80nk_[0] & 0xFF;
+		sendData[44] = d80nk_[1] & 0xFF;
+		sendData[45] = d80nk_[2] & 0xFF;
+		sendData[46] = d80nk_[3] & 0xFF;
+		sendData[47] = checksum(sendData, 48);
+		HAL_UART_Transmit(&huart1, sendData, 48, HAL_MAX_DELAY);
 		vTaskDelay(tick_delay);
 	}
 
