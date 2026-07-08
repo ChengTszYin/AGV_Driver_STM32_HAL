@@ -18,7 +18,7 @@ Chassis::Chassis(uint8_t* _id, int num_motor)
 	for(uint8_t j=0; j < num_motor; ++j)
 	{
 		motor[j] = new DDSM115(m_id[j]);
-		LOG("Created motor[%d] = %p\r\n", j, motor[j]);
+//		LOG("Created motor[%d] = %p\r\n", j, motor[j]);
 	}
 };
 
@@ -87,9 +87,9 @@ void Chassis::HostMessageParse(uint8_t *receiveBytes)
 
 void Chassis::MotorMessageSend()
 {
-	uint32_t tick_delay = pdMS_TO_TICKS(100);
+	uint32_t tick_delay = pdMS_TO_TICKS(10);
 	uint8_t sendData[48] = {0};
-	sendData[0] = 0x00;
+	sendData[0] = 0xAA;
 	sendData[1] = m_id[0] ;
 	sendData[2] = (m_velocty[0] >> 8) & 0xFF;
 	sendData[3] = m_velocty[0] & 0xFF;
